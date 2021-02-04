@@ -78,6 +78,20 @@ class PacketParser:
             # else: logging.debug("Neither to victim or to gateway: MAC: %s -> %s, IP: %s -> %s, victim list %s", src_mac, dst_mac, src_ip, dst_ip, self._victim_list)
 
 
+    def spoof_DNS(self, pkt):
+        """Takes a DNS response and spoof it if it is a blacklisted domain, replaces DNS response with our host IP to prevent packets from reaching the domain"""
+        host_ip = self._host_state.host_ip
+        redirect_to = host_ip
+        domain = pkt[sc.DNSRR].rrname.decode("utf-8").rstrip(".")
+
+        spoofed_response = sc.IP(dst=pkt[sc.IP].dst, src=pkt[sc.IP].src)/\
+                            sc.UDP(dport=pkt[sc.UDP].dport, sport=pkt[sc.UDP].sport)/\
+                            sc.DNS(id=pkt[sc.DNS].id, qd=pkt[sc.DNS].qd, aa = 1, qr=1, \
+                                an=sc.DNSRR(rrname=domain,  ttl=600, rdata=redirect_to))
+        logging.info("[Packet Parser] Spoofing %s to IP %s", domain, redirect_to)
+        sc.send(spoofed_response, verbose=False)
+
+
     def parse_DNS_response(self, pkt):
         """parse DNS packets to extract sld and IP list"""
         domain_name = pkt[sc.DNS].qd.qname.decode().rstrip(".")
@@ -93,18 +107,39 @@ class PacketParser:
         return domain_name, response_list
 
 
-    def spoof_DNS(self, pkt):
-        """Takes a DNS response and spoof it if it is a blacklisted domain, replaces DNS response with our host IP to prevent packets from reaching the domain"""
-        host_ip = self._host_state.host_ip
-        redirect_to = host_ip
-        domain = pkt[sc.DNSRR].rrname.decode("utf-8").rstrip(".")
 
-        spoofed_response = sc.IP(dst=pkt[sc.IP].dst, src=pkt[sc.IP].src)/\
-                            sc.UDP(dport=pkt[sc.UDP].dport, sport=pkt[sc.UDP].sport)/\
-                            sc.DNS(id=pkt[sc.DNS].id, qd=pkt[sc.DNS].qd, aa = 1, qr=1, \
-                                an=sc.DNSRR(rrname=domain,  ttl=600, rdata=redirect_to))
-        logging.info("[Packet Parser] Spoofing %s to IP %s", domain, redirect_to)
-        sc.send(spoofed_response, verbose=False)
+    def parse_DNS(self, pkt):
+        is_DNS_query = (pkt[sc.DNS].qr == 0)
+        if is_DNS_query:
+            # forward DNS queries
+            self.forward_packet(pkt)
+        else:
+            # check that response is not empty
+            if pkt[sc.DNS].qdcount > 0 and pkt[sc.DNS].ancount > 0 and pkt.haslayer(sc.DNSRR):
+                # parse DNS response
+                fqdn, ip_list = self.parse_DNS_response(pkt)
+                logging.debug("[PacketParser] Domain %s, ip list %s", fqdn, ip_list)
+                # add to pDNS data
+                self.add_to_pDNS(fqdn, ip_list)
+                if self.is_in_blacklist(fqdn):
+                    self.spoof_DNS(pkt)
+                else:
+                    self.forward_packet(pkt)
+            else:
+                #there was no response record
+                if pkt[sc.DNS].rcode == 3:
+                    #NXDOMAIN
+                    fqdn = pkt[sc.DNS].qd.qname.decode().rstrip(".")
+                    logging.debug("[PacketParser] Domain %s does not exist", fqdn)
+                    self.add_to_pDNS(fqdn, [])
+                    self.forward_packet(pkt)
+
+
+    def parse_ARP(self, pkt):
+        """Process an ARP packet and update the ARP table of the host state"""
+        if pkt.op == 2:
+            # only deal with ARP responses
+            self._host_state.set_arp_table(pkt[sc.ARP].psrc, pkt[sc.ARP].hwsrc)
 
 
     def parse_packet(self, pkt):
@@ -119,24 +154,10 @@ class PacketParser:
                     #do not parse packets destined to our host
                     return 
 
-                has_DNS_layer = (sc.DNS in pkt)
-                if has_DNS_layer:
-                    is_DNS_query = (pkt[sc.DNS].qr == 0)
-                    if is_DNS_query:
-                        # forward DNS queries
-                        self.forward_packet(pkt)
-                    else:
-                        # check that response is not empty
-                        if pkt[sc.DNS].qdcount > 0 and pkt[sc.DNS].ancount > 0 and pkt.haslayer(sc.DNSRR):
-                            # parse DNS response
-                            fqdn, ip_list = self.parse_DNS_response(pkt)
-                            logging.info("[PacketParser] Domain %s, ip list %s", fqdn, ip_list)
-                            # add to pDNS data
-                            self.add_to_pDNS(fqdn, ip_list)
-                            if self.is_in_blacklist(fqdn):
-                                self.spoof_DNS(pkt)
-                            else:
-                                self.forward_packet(pkt)
+                if sc.DNS in pkt:
+                    self.parse_DNS(pkt)
+                elif sc.ARP in pkt:
+                    self.parse_ARP(pkt)
 
                 else: # has no DNS layer,
                     # checking for blacklist is not necessary since DNS is spoofed

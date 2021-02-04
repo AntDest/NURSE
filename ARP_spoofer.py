@@ -68,7 +68,7 @@ class ARP_spoofer:
         while True:
             # wait between 2 spoofing packets
             time.sleep(2)
-            logging.debug("[ARP spoofer] New iteration: check if active")
+            # logging.debug("[ARP spoofer] New iteration: check if active")
             with self.lock:
                 #check if the thread has to stop
                 if not self._active:
