@@ -1,8 +1,8 @@
-import scapy.all as sc
 import logging
-import traceback
-from utils_variables import DNS_RECORD_TYPE
+import scapy.all as sc
 
+from utils_variables import DNS_RECORD_TYPE
+from utils import safe_run
 
 class PacketParser:
     def __init__(self, host_state):
@@ -31,7 +31,6 @@ class PacketParser:
             # get the level of the blacklisted domain, and extract same level out of given domain
             black_domain_level = black_domain.count(".") + 1
             domain_same_level = ".".join(domain.split(".")[-black_domain_level:])
-            print(black_domain, domain_same_level)
             if domain_same_level == black_domain:
                 logging.info("[Packet Parser] Domain %s is blacklisted by rule: %s", domain, black_domain)
                 return True
@@ -117,8 +116,8 @@ class PacketParser:
             # only deal with IP packets, which are targetted by ARP spoofing
             if sc.IP in pkt:
                 if pkt[sc.IP].dst == self._host_state.host_ip:
-                        #do not parse packets destined to our host
-                        return 
+                    #do not parse packets destined to our host
+                    return 
 
                 has_DNS_layer = (sc.DNS in pkt)
                 if has_DNS_layer:
@@ -147,8 +146,8 @@ class PacketParser:
         except OSError:
             # some packets are too big to be sent to sockets, causing OSError, to fix.
             pass
-        except Exception as e:
-            pkt.show()
-            logging.debug(traceback.format_exc())
-            logging.debug(pkt.summary())
-            logging.error(e)
+
+
+    def prn_call(self, pkt):
+        """This is the function that is called by the prn callback in Sniffer"""
+        safe_run(self.parse_packet, args=[pkt])

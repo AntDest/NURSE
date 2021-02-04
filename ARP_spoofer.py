@@ -1,7 +1,6 @@
 import time
 import threading
 import scapy.all as sc
-import os
 import logging
 
 class ARP_spoofer:

@@ -1,7 +1,6 @@
 import threading
-import scapy.all as sc
 import logging
-
+import scapy.all as sc
 
 class Sniffer:
     def __init__(self, host_state):
@@ -9,7 +8,7 @@ class Sniffer:
         self.lock = threading.Lock()
         self._active = False
         self.sniffer = sc.AsyncSniffer(
-            prn=self._host_state.packet_parser.parse_packet,
+            prn=self._host_state.packet_parser.prn_call,
             )
 
     def start(self):
