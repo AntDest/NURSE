@@ -29,6 +29,7 @@ class ARP_spoofer:
         with self.lock:
             self._active = False
         self.arp_restore()
+        self._thread.join()
         return
 
     def get_mac(self, ip_address):
@@ -66,8 +67,6 @@ class ARP_spoofer:
     def arp_spoof_loop(self):
         """At each iteration obtains MAC addresses of targeted IPs and spoof their ARP tables"""
         while True:
-            # wait between 2 spoofing packets
-            time.sleep(2)
             # logging.debug("[ARP spoofer] New iteration: check if active")
             with self.lock:
                 #check if the thread has to stop
@@ -104,6 +103,9 @@ class ARP_spoofer:
                 # logging.debug("[ARP spoofer] Sending ARP spoofing packets to %s", victim_ip)
                 mac_host = self._host_state.host_mac
                 self.arp_spoof(gateway_mac, victim_mac, gateway_ip, victim_ip, mac_host)
+
+            # wait between 2 spoofing packets
+            time.sleep(2)
 
 if __name__ == "__main__":
     ip_target = "192.168.1.46"

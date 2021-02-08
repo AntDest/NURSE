@@ -3,12 +3,12 @@ import logging
 import scapy.all as sc
 
 class Sniffer:
-    def __init__(self, host_state):
+    def __init__(self, host_state, packet_parser):
         self._host_state = host_state
         self.lock = threading.Lock()
         self._active = False
         self.sniffer = sc.AsyncSniffer(
-            prn=self._host_state.packet_parser.prn_call,
+            prn=packet_parser.prn_call,
             )
 
     def start(self):

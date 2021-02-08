@@ -3,8 +3,24 @@ import sys
 import traceback
 import logging
 import threading
-
+from collections import namedtuple
+from typing import NamedTuple
 _lock = threading.Lock()
+
+# namedtuple for flows key and flow packets:
+FlowKey = namedtuple("FlowKey",["IP_src", "IP_dst", "port_src", "port_dst", "protocol"])
+class FlowPkt(NamedTuple):
+    inbound: bool
+    size: int
+    timestamp: float
+
+
+def merge_dict(x,y):
+    z = x.copy()   # start with x's keys and values
+    z.update(y)    # modifies z with y's keys and values & returns None
+    return z
+
+
 
 # SafeRunError taken from iot-inspector, to prevent crashes
 class _SafeRunError(object):

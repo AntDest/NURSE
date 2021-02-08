@@ -2,25 +2,16 @@ import logging
 import scapy.all as sc
 
 from utils_variables import DNS_RECORD_TYPE
-from utils import safe_run
+from utils import safe_run, FlowKey, FlowPkt
+from TrafficMonitor import TrafficMonitor
 
 class PacketParser:
-    def __init__(self, host_state):
+    def __init__(self, host_state, traffic_monitor):
         self._host_state = host_state
+        self.traffic_monitor = traffic_monitor
         self._victim_list = self._host_state.victim_ip_list
         self.socket = sc.conf.L2socket()
         self.blacklist = self._host_state.blacklist_domains
-
-    def add_to_pDNS(self, domain_name, response_list):
-        """Add entry to pDNS database in the host_state. Note that not all IPs are actually used because of DNS spoofing"""
-        with self._host_state.lock:
-            if domain_name not in self._host_state.passive_DNS:
-                self._host_state.passive_DNS[domain_name] = response_list
-            else:
-                for ip in response_list:
-                    if ip not in self._host_state.passive_DNS[domain_name]:
-                        self._host_state.passive_DNS[domain_name].append(ip)
-
 
     def is_in_blacklist(self, domain):
         """
@@ -118,11 +109,12 @@ class PacketParser:
             if pkt[sc.DNS].qdcount > 0 and pkt[sc.DNS].ancount > 0 and pkt.haslayer(sc.DNSRR):
                 # parse DNS response
                 fqdn, ip_list = self.parse_DNS_response(pkt)
-                logging.debug("[PacketParser] Domain %s, ip list %s", fqdn, ip_list)
+                logging.debug("[Packet Parser] Domain %s, ip list %s", fqdn, ip_list)
                 # add to pDNS data
-                self.add_to_pDNS(fqdn, ip_list)
+                self.traffic_monitor.add_to_pDNS(fqdn, ip_list)
                 if self.is_in_blacklist(fqdn):
                     self.spoof_DNS(pkt)
+                    self.traffic_monitor.add_to_blocked_domains(fqdn)
                 else:
                     self.forward_packet(pkt)
             else:
@@ -130,8 +122,8 @@ class PacketParser:
                 if pkt[sc.DNS].rcode == 3:
                     #NXDOMAIN
                     fqdn = pkt[sc.DNS].qd.qname.decode().rstrip(".")
-                    logging.debug("[PacketParser] Domain %s does not exist", fqdn)
-                    self.add_to_pDNS(fqdn, [])
+                    logging.debug("[Packet Parser] Domain %s does not exist", fqdn)
+                    self.traffic_monitor.add_to_pDNS(fqdn, [])
                     self.forward_packet(pkt)
 
 
@@ -139,7 +131,50 @@ class PacketParser:
         """Process an ARP packet and update the ARP table of the host state"""
         if pkt.op == 2:
             # only deal with ARP responses
-            self._host_state.set_arp_table(pkt[sc.ARP].psrc, pkt[sc.ARP].hwsrc)
+            mac =  pkt[sc.ARP].hwsrc
+            ip = pkt[sc.ARP].psrc
+            self.traffic_monitor.add_to_ARP_table(ip, mac)
+
+    
+    def parse_TCP_UDP(self, pkt, protocol):
+        """
+        Parse a TCP packet to extract information and send it to the traffic monitor
+        protocol should be \"TCP\" or \"UDP\"
+        """
+        if protocol == "TCP": 
+            proto = sc.TCP
+        elif protocol == "UDP": 
+            proto = sc.UDP
+        else:
+            raise Exception(f"Unknown protocol {protocol}")
+        #determine if packet is outbound or inboud:
+        if pkt[sc.IP].src in self._victim_list:
+            ip_src = pkt[sc.IP].src
+            ip_dst = pkt[sc.IP].dst
+            port_src = pkt[proto].sport
+            port_dst = pkt[proto].dport
+            inbound = False     # inbound means out to in 
+        elif pkt[sc.IP].dst in self._victim_list:
+            ip_src = pkt[sc.IP].dst
+            ip_dst = pkt[sc.IP].src
+            port_dst = pkt[proto].sport
+            port_src = pkt[proto].dport
+            inbound = True
+
+        flow_key = FlowKey(
+            IP_src=ip_src,
+            IP_dst=ip_dst,
+            port_src=port_src,
+            port_dst=port_dst,
+            protocol=protocol
+        )
+        pkt_attributes = FlowPkt(
+            inbound=inbound,
+            size=len(pkt[proto].payload),
+            timestamp=pkt.time
+        )
+        self.traffic_monitor.add_to_flow(flow_key, pkt_attributes)
+        
 
 
     def parse_packet(self, pkt):
@@ -153,16 +188,24 @@ class PacketParser:
                 if pkt[sc.IP].dst == self._host_state.host_ip:
                     #do not parse packets destined to our host
                     return 
-
+                elif pkt[sc.IP].dst not in self._victim_list and pkt[sc.IP].src not in self._victim_list:
+                    # packet from IPs that are not victims
+                    return
                 if sc.DNS in pkt:
                     self.parse_DNS(pkt)
+                    # do not forward packet here, since it may be spoofed
                 elif sc.ARP in pkt:
                     self.parse_ARP(pkt)
-
-                else: # has no DNS layer,
-                    # checking for blacklist is not necessary since DNS is spoofed
-                    # TODO: sent pkt to traffic monitor
-                    # forward packet since packet is ARP spoofed
+                    self.forward_packet(pkt)
+                elif sc.TCP in pkt:
+                    self.parse_TCP_UDP(pkt, protocol="TCP")
+                    self.forward_packet(pkt)
+                elif sc.UDP in pkt:
+                    self.parse_TCP_UDP(pkt, protocol="UDP")
+                    self.forward_packet(pkt)
+                else: # has no known layer
+                    # checking for blacklist should not be necessary since DNS is spoofed
+                    # forward packet since the packet destination MAC is spoofed
                     self.forward_packet(pkt)
         except OSError:
             # some packets are too big to be sent to sockets, causing OSError, to fix.

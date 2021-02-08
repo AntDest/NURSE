@@ -5,5 +5,7 @@ BLACKLIST_DOMAINS = [
     "youtube.com",
     "facebook.com",
     "neverssl.com",
-    "grenoble.fr"
+    "grenoble.fr" 
 ]
+
+DATABASE_UPDATE_DELAY = 20

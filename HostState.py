@@ -5,29 +5,45 @@ import scapy.all as sc
 from ARP_spoofer import ARP_spoofer
 from Sniffer import Sniffer
 from PacketParser import PacketParser
+from TrafficMonitor import TrafficMonitor
 
-from config import IP_VICTIMS, BLACKLIST_DOMAINS
+from config import IP_VICTIMS, BLACKLIST_DOMAINS, DATABASE_UPDATE_DELAY
 
 
 class HostState:
     """Host state that starts all threads and stores the global information"""
     def __init__(self):
+        self.lock = threading.Lock()
+
+        # list of network parameters that will be useful for child threads
         self.host_ip = None
         self.host_mac = None
         self.gateway_ip = None
         self.victim_ip_list = []
         self.interface = None
-        self.lock = threading.Lock()
+        self.blacklist_domains = BLACKLIST_DOMAINS
+
+
+        # all children threads
+        self.ARP_spoof_thread = None
+        self.sniffer_thread = None
+        self.packet_parser = None
+        self.traffic_monitor = None
+
+
+
+        # global data storage about traffic
         # ARP table that will be modified on the go
         self.arp_table = {}
         # pDNS table: keys are domains, values are lists of IPs
         self.passive_DNS = {}
-
-        self.ARP_spoof_thread = None
-        self.sniffer_thread = None
-        self.packet_parser = None
-
-        self.blacklist_domains = BLACKLIST_DOMAINS
+        # list of all fqdn that have been spoofed
+        self.blocked_domains = set()
+        #dict of all flows
+        # keys are namedtuples (IP_src, IP_dst, port_src, port_dst, protocol)
+        # by convention, IP_src is the victim IP
+        # protocol is UDP or TCP
+        self.flows = {}
 
     def start(self):
         # TODO: watch for IP changes in the network
@@ -35,22 +51,26 @@ class HostState:
         self.interface, self.host_ip, self.gateway_ip = sc.conf.route.route("0.0.0.0")
         self.host_mac = sc.get_if_hwaddr(self.interface)
         self.victim_ip_list = IP_VICTIMS
-        self.packet_parser = PacketParser(self)
 
         self.ARP_spoof_thread = ARP_spoofer(self)
         self.ARP_spoof_thread.victim_ip_list = self.victim_ip_list
         self.ARP_spoof_thread.start()
 
-        self.sniffer_thread = Sniffer(self)
+        self.traffic_monitor = TrafficMonitor(self, DATABASE_UPDATE_DELAY)
+        self.traffic_monitor.start()
+
+        self.packet_parser = PacketParser(self, self.traffic_monitor)
+
+        self.sniffer_thread = Sniffer(self, self.packet_parser)
         self.sniffer_thread.start()
 
 
     def stop(self):
         self.ARP_spoof_thread.stop()
         self.sniffer_thread.stop()
-        with self.lock:
-            print("PASSIVE DNS:")
-            print(self.passive_DNS)
+        self.traffic_monitor.stop()
+        print("Blocked domains: ", self.blocked_domains)
+
 
     def get_arp_table(self):
         with self.lock:

@@ -14,7 +14,8 @@ try:
     h.start()
     time.sleep(120)
 except KeyboardInterrupt:
-    logging.info("[Host] Keyboard Interrupt, ending")
+    print("") # breakline after ^C to help reading
+    logging.info("[Main] Keyboard Interrupt, ending")
 except Exception as e:
     print(traceback.format_exc())
     print(e)
