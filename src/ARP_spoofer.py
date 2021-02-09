@@ -15,6 +15,7 @@ class ARP_spoofer:
         # ARP parameters
         self.victim_ip_list = []
         self.gateway_mac = None
+        self.has_spoofed = False
 
     def start(self):
         """starts the ARP spoofing thread. To be called by host state"""
@@ -28,7 +29,8 @@ class ARP_spoofer:
         logging.info("[ARP spoofer] ARP spoofing stopping")
         with self.lock:
             self._active = False
-        self.arp_restore()
+        if self.has_spoofed:
+            self.arp_restore()
         self._thread.join()
         return
 
@@ -103,6 +105,7 @@ class ARP_spoofer:
                 # logging.debug("[ARP spoofer] Sending ARP spoofing packets to %s", victim_ip)
                 mac_host = self._host_state.host_mac
                 self.arp_spoof(gateway_mac, victim_mac, gateway_ip, victim_ip, mac_host)
+                self.has_spoofed = True
 
             # wait between 2 spoofing packets
             time.sleep(2)
