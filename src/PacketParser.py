@@ -1,9 +1,9 @@
 import logging
 import scapy.all as sc
 
-from utils_variables import DNS_RECORD_TYPE
-from utils import safe_run, FlowKey, FlowPkt
-from TrafficMonitor import TrafficMonitor
+from src.utils_variables import DNS_RECORD_TYPE
+from src.utils import safe_run, FlowKey, FlowPkt
+from src.TrafficMonitor import TrafficMonitor
 
 class PacketParser:
     def __init__(self, host_state, traffic_monitor):

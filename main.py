@@ -3,8 +3,7 @@ import sys
 import logging
 import traceback
 
-from HostState import HostState
-
+from src.HostState import HostState
 
 
 logging_format = "%(asctime)s: %(message)s"

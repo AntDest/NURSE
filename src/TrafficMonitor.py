@@ -1,8 +1,7 @@
-from utils import FlowKey, FlowPkt
 import threading
 import logging
 import time
-from utils import merge_dict
+from src.utils import merge_dict, FlowKey, FlowPkt
 
 
 class TrafficMonitor:

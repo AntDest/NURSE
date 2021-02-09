@@ -2,10 +2,10 @@ import threading
 import logging
 import scapy.all as sc
 
-from ARP_spoofer import ARP_spoofer
-from Sniffer import Sniffer
-from PacketParser import PacketParser
-from TrafficMonitor import TrafficMonitor
+from src.ARP_spoofer import ARP_spoofer
+from src.Sniffer import Sniffer
+from src.PacketParser import PacketParser
+from src.TrafficMonitor import TrafficMonitor
 
 from config import IP_VICTIMS, BLACKLIST_DOMAINS, DATABASE_UPDATE_DELAY
 
