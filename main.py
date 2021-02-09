@@ -9,24 +9,24 @@ from src.Sniffer import Sniffer
 from src.PacketParser import PacketParser
 from src.TrafficMonitor import TrafficMonitor
 
-from config import *
+import config
 
 logging_format = "%(asctime)s: %(message)s"
 logging.basicConfig(stream=sys.stdout, format=logging_format, level=logging.DEBUG, datefmt="%H:%M:%S")
 h = HostState()
 try:
-    h.blacklist_domains = BLACKLIST_DOMAINS
-    h.victim_ip_list = IP_VICTIMS
+    h.blacklist_domains = config.BLACKLIST_DOMAINS
+    h.victim_ip_list = config.IP_VICTIMS
 
     #initiate all classes of other threads and link them to the host
     h.ARP_spoof_thread = ARP_spoofer(h)
-    h.traffic_monitor = TrafficMonitor(h, DATABASE_UPDATE_DELAY)
+    h.traffic_monitor = TrafficMonitor(h, config.DATABASE_UPDATE_DELAY)
     h.packet_parser = PacketParser(h, h.traffic_monitor)
     h.sniffer_thread = Sniffer(h, h.packet_parser)
     h.start()
 
-    if QUIT_AFTER > 0:
-        time.sleep(QUIT_AFTER)
+    if config.QUIT_AFTER > 0:
+        time.sleep(config.QUIT_AFTER)
     else:
         while True:
             continue
