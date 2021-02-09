@@ -2,13 +2,6 @@ import threading
 import logging
 import scapy.all as sc
 
-from src.ARP_spoofer import ARP_spoofer
-from src.Sniffer import Sniffer
-from src.PacketParser import PacketParser
-from src.TrafficMonitor import TrafficMonitor
-
-from config import IP_VICTIMS, BLACKLIST_DOMAINS, DATABASE_UPDATE_DELAY
-
 
 class HostState:
     """Host state that starts all threads and stores the global information"""
@@ -21,8 +14,6 @@ class HostState:
         self.gateway_ip = None
         self.victim_ip_list = []
         self.interface = None
-        self.blacklist_domains = BLACKLIST_DOMAINS
-
 
         # all children threads
         self.ARP_spoof_thread = None
@@ -50,18 +41,11 @@ class HostState:
         logging.info("[Host] Getting connection parameters")
         self.interface, self.host_ip, self.gateway_ip = sc.conf.route.route("0.0.0.0")
         self.host_mac = sc.get_if_hwaddr(self.interface)
-        self.victim_ip_list = IP_VICTIMS
 
-        self.ARP_spoof_thread = ARP_spoofer(self)
+
         self.ARP_spoof_thread.victim_ip_list = self.victim_ip_list
         self.ARP_spoof_thread.start()
-
-        self.traffic_monitor = TrafficMonitor(self, DATABASE_UPDATE_DELAY)
         self.traffic_monitor.start()
-
-        self.packet_parser = PacketParser(self, self.traffic_monitor)
-
-        self.sniffer_thread = Sniffer(self, self.packet_parser)
         self.sniffer_thread.start()
 
 

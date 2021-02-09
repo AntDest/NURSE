@@ -1,4 +1,3 @@
-
 DNS_RECORD_TYPE = {
     1: "A",
     28: "AAAA",

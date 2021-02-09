@@ -9,3 +9,6 @@ BLACKLIST_DOMAINS = [
 ]
 
 DATABASE_UPDATE_DELAY = 20
+
+# If QUIT_AFTER > 0, the program will stop after the given number of seconds
+QUIT_AFTER = 0
