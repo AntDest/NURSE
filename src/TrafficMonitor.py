@@ -16,7 +16,7 @@ class TrafficMonitor:
         self.lock = threading.Lock()
         self.active = True
         self.update_delay = update_delay
-
+        self.active_check_interval = 5
 
         self.blocked_domains = set()
         self.passive_DNS = {}
@@ -58,8 +58,19 @@ class TrafficMonitor:
                         self.host_state.flows[flow_key] = [] 
                     self.host_state.flows[flow_key] += self.flows[flow_key]
             # end of lock
-            # wait until next iteration
-            time.sleep(self.update_delay)
+            # wait until next iteration,
+            # split waiting time into small waits to check if process is still active
+            for seconds_waited in range(0, self.update_delay, self.active_check_interval):
+                if not self.active:
+                    # break from this waiting loop
+                    break
+                if (self.update_delay - seconds_waited) > self.active_check_interval:
+                    # wait for the check interval duration
+                    time.sleep(self.active_check_interval)
+                else:
+                    # if the check interval is longer than the wait until the next update
+                    # only wait until the next update
+                    time.sleep((self.update_delay - seconds_waited))
 
 
 
