@@ -57,6 +57,9 @@ class TrafficMonitor:
                     if flow_key not in self.host_state.flows:
                         self.host_state.flows[flow_key] = [] 
                     self.host_state.flows[flow_key] += self.flows[flow_key]
+
+                self.host_state.last_update = time.time()
+                
             # end of lock
             # wait until next iteration,
             # split waiting time into small waits to check if process is still active

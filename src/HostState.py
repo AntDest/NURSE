@@ -1,7 +1,7 @@
-import threading
 import logging
+import threading
+import time
 import scapy.all as sc
-
 
 class HostState:
     """Host state that starts all threads and stores the global information"""
@@ -20,7 +20,7 @@ class HostState:
         self.sniffer_thread = None
         self.packet_parser = None
         self.traffic_monitor = None
-
+        self.server_thread = None
 
 
         # global data storage about traffic
@@ -35,6 +35,7 @@ class HostState:
         # by convention, IP_src is the victim IP
         # protocol is UDP or TCP
         self.flows = {}
+        self.last_update = time.time()
 
     def start(self):
         # TODO: watch for IP changes in the network
@@ -47,6 +48,7 @@ class HostState:
         self.ARP_spoof_thread.start()
         self.traffic_monitor.start()
         self.sniffer_thread.start()
+        self.server_thread.start()
 
 
     def stop(self):

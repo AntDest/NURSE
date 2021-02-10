@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+</head>
+<body>
+
+    <h1>Dashboard</h1>
+
+    <p>This is where you can see some information about the captured traffic</p>
+
+    <p>Last update {{last_update | timestamp_to_date}}</p>
+
+    <ul>
+        {% for domain in domains %}
+        <li>{{domain}}</li>
+        {% endfor %}
+    </ul>
+
+
+
+
+</body>
+</html>
