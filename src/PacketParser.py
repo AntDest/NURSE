@@ -170,7 +170,7 @@ class PacketParser:
         pkt_attributes = FlowPkt(
             inbound=inbound,
             size=len(pkt[proto].payload),
-            timestamp=pkt.time
+            timestamp=int(pkt.time)
         )
         self.traffic_monitor.add_to_flow(flow_key, pkt_attributes)
         

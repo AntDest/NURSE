@@ -14,7 +14,7 @@ FlowKey = namedtuple("FlowKey",["IP_src", "IP_dst", "port_src", "port_dst", "pro
 class FlowPkt(NamedTuple):
     inbound: bool
     size: int
-    timestamp: float
+    timestamp: int
 
 
 def merge_dict(x,y):

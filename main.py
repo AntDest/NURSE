@@ -13,7 +13,7 @@ from src.Server import Server
 import config
 
 logging_format = "%(asctime)s: %(message)s"
-logging.basicConfig(stream=sys.stdout, format=logging_format, level=logging.INFO, datefmt="%H:%M:%S")
+logging.basicConfig(stream=sys.stdout, format=logging_format, level=logging.DEBUG, datefmt="%H:%M:%S")
 
 logging.info("[Main] Initializing HostState")
 h = HostState()

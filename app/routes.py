@@ -1,3 +1,4 @@
+import json
 import time
 from flask import render_template
 from app import app
@@ -20,10 +21,6 @@ def get_host_state():
 def timestamp_to_date(t):
     return time.ctime(t)
 
-@app.template_filter('timestamp_to_hhmmss')
-def timestamp_to_hhmmss(t):
-    return time.strftime('%H:%M:%S', t)
-
 
 
 @app.route('/')
@@ -33,5 +30,27 @@ def index():
     with hs.lock:
         domain_scores = hs.domain_scores.copy()
         last_update = hs.last_update
+        flows = hs.flows.copy()
     scores_table = [{"domain":k, "score":v} for k,v in domain_scores.items()]
-    return render_template("index.html", last_update=last_update, scores_table=scores_table)
+
+    flows_list = []
+    for key in flows:
+        key_dict = {}
+        k = key._asdict()
+        for key_name in k:
+            key_dict[key_name] = getattr(key, key_name)
+        print(key_dict)
+        for pkt in flows[key]:
+            line_dict = key_dict.copy()
+            for key_name in pkt._asdict():
+                line_dict[key_name] = getattr(pkt, key_name)
+            flows_list.append(line_dict)
+
+    data = {
+        "scores": scores_table,
+        "last_update": last_update,
+        "flows": flows_list
+    }
+
+
+    return render_template("index.html", data=data)
