@@ -1,8 +1,8 @@
 import logging
 import scapy.all as sc
 
-from src.utils_variables import DNS_RECORD_TYPE
-from src.utils import safe_run, FlowKey, FlowPkt
+from src.utils.utils_variables import DNS_RECORD_TYPE
+from src.utils.utils import safe_run, FlowKey, FlowPkt
 
 class PacketParser:
     def __init__(self, host_state, traffic_monitor):
@@ -78,7 +78,7 @@ class PacketParser:
                             sc.UDP(dport=pkt[sc.UDP].dport, sport=pkt[sc.UDP].sport)/\
                             sc.DNS(id=pkt[sc.DNS].id, qd=pkt[sc.DNS].qd, aa = 1, qr=1, \
                                 an=sc.DNSRR(rrname=domain,  ttl=600, rdata=redirect_to))
-        logging.info("[Packet Parser] Spoofing %s to IP %s", domain, redirect_to)
+        logging.debug("[Packet Parser] Spoofing %s to IP %s", domain, redirect_to)
         sc.send(spoofed_response, verbose=False)
 
 

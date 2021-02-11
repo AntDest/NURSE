@@ -35,6 +35,8 @@ class HostState:
         # by convention, IP_src is the victim IP
         # protocol is UDP or TCP
         self.flows = {}
+        # dict containing scores from the classifier for each domain
+        self.domain_scores = {}
         self.last_update = time.time()
 
     def start(self):
@@ -56,6 +58,7 @@ class HostState:
         self.sniffer_thread.stop()
         self.traffic_monitor.stop()
         print("Blocked domains: ", self.blocked_domains)
+        print("Domain scores: ", self.domain_scores)
 
 
     def get_arp_table(self):

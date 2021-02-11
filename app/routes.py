@@ -18,8 +18,11 @@ def get_host_state():
 
 @app.template_filter('timestamp_to_date')
 def timestamp_to_date(t):
-    return time.ctime(t) # datetime.datetime.fromtimestamp(s)
+    return time.ctime(t)
 
+@app.template_filter('timestamp_to_hhmmss')
+def timestamp_to_hhmmss(t):
+    return time.strftime('%H:%M:%S', t)
 
 
 
@@ -28,7 +31,7 @@ def timestamp_to_date(t):
 def index():
     hs = get_host_state()
     with hs.lock:
-        pDNS = hs.passive_DNS.copy()
+        domain_scores = hs.domain_scores.copy()
         last_update = hs.last_update
-    domain_list = list(pDNS.keys())
-    return render_template("index.html", last_update=last_update, domains=domain_list)
+    scores_table = [{"domain":k, "score":v} for k,v in domain_scores.items()]
+    return render_template("index.html", last_update=last_update, scores_table=scores_table)

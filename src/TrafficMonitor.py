@@ -1,8 +1,8 @@
 import threading
 import logging
 import time
-from src.utils import merge_dict, FlowKey, FlowPkt
-
+from src.utils.utils import merge_dict, FlowKey, FlowPkt
+from src.Classifier import DomainClassifier
 
 class TrafficMonitor:
     """
@@ -22,15 +22,19 @@ class TrafficMonitor:
         self.passive_DNS = {}
         self.arp_table = {}
         self.flows = {}
+        self.domain_scores = {}
+
+        logging.info("[TrafficMonitor] Initialising classifier")
+        self.classifier = DomainClassifier()
 
     def start(self):
         with self.lock:
             self.active = True
-        logging.info("[Server] Server starting")
+        logging.info("[Monitor] Traffic monitor starting")
         self.updater_thread.start()
 
     def stop(self):
-        logging.info("[Monitor] Monitor stopping")
+        logging.info("[Monitor] Traffic monitor stopping")
         self.active = False
         self.updater_thread.join()
 
@@ -58,6 +62,7 @@ class TrafficMonitor:
                         self.host_state.flows[flow_key] = [] 
                     self.host_state.flows[flow_key] += self.flows[flow_key]
 
+                self.host_state.domain_scores = self.domain_scores
                 self.host_state.last_update = time.time()
                 
             # end of lock
@@ -76,6 +81,11 @@ class TrafficMonitor:
                     time.sleep((self.update_delay - seconds_waited))
 
 
+    def score_domain(self, domain):
+        X = self.classifier.compute_features(domain)
+        # score is computed from proba of being malicious (ie class = 1)
+        score = 10 * self.classifier.classifier.predict_proba(X)[0][1]
+        return score
 
 
     def add_to_pDNS(self, domain_name, ip_list):
@@ -85,6 +95,9 @@ class TrafficMonitor:
         # add to pDNS database in host_state
         if domain_name not in self.passive_DNS:
             self.passive_DNS[domain_name] = set(ip_list)
+            # new domain: compute its score
+            score = self.score_domain(domain_name)
+            self.domain_scores[domain_name] = score
         else:
             self.passive_DNS[domain_name].update(ip_list)
 
