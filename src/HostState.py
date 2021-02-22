@@ -37,6 +37,8 @@ class HostState:
         self.flows = {}
         # dict containing scores from the classifier for each domain
         self.domain_scores = {}
+        # dict dontaining device names: mac -> device_names
+        self.device_names = {}
         self.last_update = time.time()
 
     def start(self):
@@ -59,6 +61,7 @@ class HostState:
         self.traffic_monitor.stop()
         print("Blocked domains: ", self.blocked_domains)
         print("Domain scores: ", self.domain_scores)
+        print("Devices: ", self.device_names)
 
 
     def get_arp_table(self):

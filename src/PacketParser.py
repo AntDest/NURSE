@@ -175,6 +175,17 @@ class PacketParser:
         self.traffic_monitor.add_to_flow(flow_key, pkt_attributes)
         
 
+    def parse_DHCP(self, pkt):
+        """Parse DHCP packets in order to get the device names"""
+        pkt.show()
+        option_dict = {t[0]: t[1] for t in pkt[sc.DHCP].options if isinstance(t, tuple)}
+        #check if there is a device name:
+        if "hostname" in option_dict:
+            device_mac = pkt[sc.Ether].src
+            hostname = option_dict["hostname"].decode("utf-8")
+            with self._host_state.lock:
+                self._host_state.device_names[device_mac] = hostname
+        
 
     def parse_packet(self, pkt):
         try:
@@ -187,25 +198,26 @@ class PacketParser:
                 if pkt[sc.IP].dst == self._host_state.host_ip:
                     #do not parse packets destined to our host
                     return 
-                elif pkt[sc.IP].dst not in self._victim_list and pkt[sc.IP].src not in self._victim_list:
-                    # packet from IPs that are not victims
-                    return
-                if sc.DNS in pkt:
-                    self.parse_DNS(pkt)
-                    # do not forward packet here, since it may be spoofed
-                elif sc.ARP in pkt:
-                    self.parse_ARP(pkt)
-                    self.forward_packet(pkt)
-                elif sc.TCP in pkt:
-                    self.parse_TCP_UDP(pkt, protocol="TCP")
-                    self.forward_packet(pkt)
-                elif sc.UDP in pkt:
-                    self.parse_TCP_UDP(pkt, protocol="UDP")
-                    self.forward_packet(pkt)
-                else: # has no known layer
-                    # checking for blacklist should not be necessary since DNS is spoofed
-                    # forward packet since the packet destination MAC is spoofed
-                    self.forward_packet(pkt)
+                if pkt[sc.IP].dst in self._victim_list or pkt[sc.IP].src in self._victim_list or pkt[sc.IP].dst == "255.255.255.255":
+                    # packet from or to IPs that are not victims
+                    if sc.DNS in pkt:
+                        self.parse_DNS(pkt)
+                        # do not forward packet here, since it may be spoofed
+                    elif sc.ARP in pkt:
+                        self.parse_ARP(pkt)
+                        self.forward_packet(pkt)
+                    elif sc.DHCP in pkt:
+                        self.parse_DHCP(pkt)
+                    elif sc.TCP in pkt:
+                        self.parse_TCP_UDP(pkt, protocol="TCP")
+                        self.forward_packet(pkt)
+                    elif sc.UDP in pkt:
+                        self.parse_TCP_UDP(pkt, protocol="UDP")
+                        self.forward_packet(pkt)
+                    else: # has no known layer
+                        # checking for blacklist should not be necessary since DNS is spoofed
+                        # forward packet since the packet destination MAC is spoofed
+                        self.forward_packet(pkt)
         except OSError:
             # some packets are too big to be sent to sockets, causing OSError, to fix.
             pass
