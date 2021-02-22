@@ -1,4 +1,12 @@
 .vscode
 __pycache__
+
 venv
+venv_win
+
 classifier.save
+
+dist
+build
+main.spec
+main_onefile.spec
