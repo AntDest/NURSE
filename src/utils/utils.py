@@ -3,6 +3,8 @@ import logging
 import sys
 import traceback
 import threading
+import scapy.all as sc
+import socket
 
 from collections import namedtuple
 from typing import NamedTuple
@@ -50,3 +52,25 @@ def safe_run(func, args=[], kwargs={}):
             logging.error(err_msg)
 
         return _SafeRunError()
+
+
+def get_mac(ip_address):
+    """Sends an ARP request and waits for a reply to obtain the MAC of the given IP address"""
+    mac_query = sc.ARP(op = 1, hwdst = "ff:ff:ff:ff:ff:ff", pdst = ip_address)
+    mac_query_ans, _ = sc.sr(mac_query, timeout=5, verbose=False)
+    for _, mac_query_response in mac_query_ans:
+        return mac_query_response[sc.ARP].hwsrc
+    # if no response, return None
+    return None
+
+
+
+def get_device_name(ip):
+    try:
+        name = socket.gethostbyaddr(ip)[0]
+    except:
+        name = ""
+    # strip the ".home suffix"
+    if name[-5:] == ".home":
+        name = name[:-5]
+    return name

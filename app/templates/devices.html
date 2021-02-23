@@ -1,0 +1,31 @@
+{% extends "layout.html" %}
+
+{% block title %}Device list{% endblock %}
+{% block header %}
+<h1>Device list</h1>
+
+<p>Here are the devices we found in your network</p>
+
+<p>Last update {{data.last_update | timestamp_to_date}}</p>
+{% endblock %}
+
+{% block content %}
+    <table id="device_table" style="width:100%">
+        <tr>
+          <th>IP</th>
+          <th>Device name</th>
+          <th>Scanning</th>
+        </tr>
+        {% for d in data.device_list %}
+        <tr>
+            <td>{{ d.IP }}</td>
+            <td>{{ d.name }}</td>
+            <td><input type="checkbox" name="scan:{{d.id}}" id="checkbox_device_{{d.id}}" {% if d.victim %}  checked  {% endif %} ></td>
+            
+        </tr>
+        {% endfor %}
+    </table>
+    </ul>
+
+
+{% endblock %}

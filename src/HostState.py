@@ -2,6 +2,7 @@ import logging
 import threading
 import time
 import scapy.all as sc
+from src.utils.utils import get_device_name
 
 class HostState:
     """Host state that starts all threads and stores the global information"""
@@ -64,6 +65,12 @@ class HostState:
         print("Devices: ", self.device_names)
 
 
+    def add_device_name(self, ip):
+        mac = self.arp_table[ip]
+        if mac not in self.device_names:
+            self.device_names[mac] = get_device_name(ip)
+
+
     def get_arp_table(self):
         with self.lock:
             # return a copy of the arp_table
@@ -73,3 +80,29 @@ class HostState:
         """adds or edits the arp table to add the mapping ip -> mac"""
         with self.lock:
             self.arp_table[ip] = mac
+        self.add_device_name(ip)
+
+
+    def get_device_list(self):
+        """
+        Returns a list of dicts with MAC, IP, name and a boolean which indicates if device is spoofed 
+        If a device has no name, the name is \"\"
+        """
+        print("ON REQUEST")
+        print(self.device_names)
+        print(self.arp_table)
+        devices = []
+        for device_id, ip in enumerate(self.arp_table):
+            d = {}
+            mac = self.arp_table[ip]
+            d["id"] = device_id
+            d["IP"] = ip
+            d["MAC"] = mac
+            if mac in self.device_names:
+                name = self.device_names[mac]
+            else:
+                name = ""
+            d["name"] = name
+            d["victim"] = (ip in self.victim_ip_list)
+            devices.append(d)
+        return devices

@@ -24,7 +24,7 @@ def timestamp_to_date(t):
 
 
 @app.route('/')
-@app.route('/index')
+@app.route('/scores')
 def index():
     hs = get_host_state()
     with hs.lock:
@@ -52,5 +52,15 @@ def index():
         "flows": flows_list
     }
 
+    return render_template("scores.html", data=data)
 
-    return render_template("index.html", data=data)
+@app.route("/devices")
+def device_list():
+    hs = get_host_state()
+    device_list = hs.get_device_list()
+    last_update = hs.last_update
+    data = {
+        "last_update": last_update,
+        "device_list": device_list
+    }
+    return render_template("devices.html", data=data)

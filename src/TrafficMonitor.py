@@ -1,8 +1,11 @@
 import threading
 import logging
 import time
+import socket
 from src.utils.utils import merge_dict, FlowKey, FlowPkt
 from src.Classifier import DomainClassifier
+from src.utils.utils import get_mac, get_device_name
+
 
 class TrafficMonitor:
     """
@@ -18,6 +21,7 @@ class TrafficMonitor:
         self.update_delay = update_delay
         self.active_check_interval = 5
 
+        self.device_names = {}      # MAC -> name
         self.blocked_domains = set()
         self.passive_DNS = {}
         self.arp_table = {}
@@ -31,6 +35,7 @@ class TrafficMonitor:
         with self.lock:
             self.active = True
         logging.info("[Monitor] Traffic monitor starting")
+        # copy the ARP table of the host state, which has some info?
         self.updater_thread.start()
 
     def stop(self):
@@ -39,22 +44,44 @@ class TrafficMonitor:
         self.updater_thread.join()
 
 
+    def new_device(self, ip):
+        """Gathers info and adds the device to ARP table and device names"""
+        # obtain mac of IP
+        if ip not in self.arp_table:
+            mac = get_mac(ip)
+            self.arp_table[ip] = mac
+        else:
+            mac = self.arp_table[ip]
+        
+        #obtain device name
+        if mac not in self.device_names:
+            name = get_device_name(ip)
+            self.device_names[mac] = name
 
 
     def updater(self):
         while self.active:
+            for ip in self.arp_table:
+                mac = self.arp_table[ip]
+                if mac not in self.device_names:
+                    name = get_device_name(ip)
+                    self.device_names[mac] = name
+
             logging.info("[Monitor] Updating data to host thread")
             with self.host_state.lock:
                 # update passive DNS: for each domain add the new IPs (the IP list is a set)
-                for domain in self.host_state.traffic_monitor.passive_DNS:
-                    self.host_state.passive_DNS.setdefault(domain, set()).update(self.host_state.traffic_monitor.passive_DNS[domain])
+                for domain in self.passive_DNS:
+                    self.host_state.passive_DNS.setdefault(domain, set()).update(self.passive_DNS[domain])
 
                 # update ARP table
-                new_ARP = merge_dict(self.host_state.arp_table, self.host_state.traffic_monitor.arp_table)
+                new_ARP = merge_dict(self.host_state.arp_table, self.arp_table)
                 self.host_state.arp_table = new_ARP.copy()
 
+                #update device names
+                self.host_state.device_names = self.device_names.copy()
+
                 #update the list of blocked domains
-                self.host_state.blocked_domains.update(self.host_state.traffic_monitor.blocked_domains)
+                self.host_state.blocked_domains.update(self.blocked_domains)
 
                 # update the list of flows
                 for flow_key in self.flows:

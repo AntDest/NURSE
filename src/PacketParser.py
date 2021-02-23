@@ -4,6 +4,8 @@ import scapy.all as sc
 from src.utils.utils_variables import DNS_RECORD_TYPE
 from src.utils.utils import safe_run, FlowKey, FlowPkt
 
+from ipaddress import ip_address    #to check if IP is private
+
 class PacketParser:
     def __init__(self, host_state, traffic_monitor):
         self._host_state = host_state
@@ -129,11 +131,21 @@ class PacketParser:
     def parse_ARP(self, pkt):
         """Process an ARP packet and update the ARP table of the host state"""
         if pkt.op == 2:
-            # only deal with ARP responses
+            # deal with ARP responses
             mac =  pkt[sc.ARP].hwsrc
             ip = pkt[sc.ARP].psrc
             self.traffic_monitor.add_to_ARP_table(ip, mac)
-
+        elif pkt.op == 1:
+            mac =  pkt[sc.ARP].hwsrc
+            ip = pkt[sc.ARP].psrc
+            self.traffic_monitor.add_to_ARP_table(ip, mac)
+            
+            # check the queried IP if it is in the local network
+            queried_ip = pkt[sc.ARP].pdst
+            if ip_address(queried_ip).is_private:
+                # do not query your own device
+                if queried_ip != self._host_state.host_ip:
+                    self.traffic_monitor.new_device(queried_ip)
     
     def parse_TCP_UDP(self, pkt, protocol):
         """
@@ -203,9 +215,6 @@ class PacketParser:
                     if sc.DNS in pkt:
                         self.parse_DNS(pkt)
                         # do not forward packet here, since it may be spoofed
-                    elif sc.ARP in pkt:
-                        self.parse_ARP(pkt)
-                        self.forward_packet(pkt)
                     elif sc.DHCP in pkt:
                         self.parse_DHCP(pkt)
                     elif sc.TCP in pkt:
@@ -218,6 +227,11 @@ class PacketParser:
                         # checking for blacklist should not be necessary since DNS is spoofed
                         # forward packet since the packet destination MAC is spoofed
                         self.forward_packet(pkt)
+            else:
+                # non IP packets
+                # we parse ARP packets to try to get more information about the devices in the network
+                if sc.ARP in pkt:
+                    self.parse_ARP(pkt)
         except OSError:
             # some packets are too big to be sent to sockets, causing OSError, to fix.
             pass
