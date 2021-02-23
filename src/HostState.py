@@ -65,6 +65,15 @@ class HostState:
         print("Devices: ", self.device_names)
 
 
+    def add_to_victim_list(self, ip):
+        if ip not in self.victim_ip_list:
+            self.victim_ip_list.append(ip)
+    
+    def remove_from_victim_list(self, ip):
+        if ip in self.victim_ip_list:
+            self.victim_ip_list.remove(ip)
+            self.ARP_spoof_thread.arp_restore_victim(ip)
+
     def add_device_name(self, ip):
         mac = self.arp_table[ip]
         if mac not in self.device_names:

