@@ -113,6 +113,9 @@ class PacketParser:
                 logging.debug("[Packet Parser] Domain %s, ip list %s", fqdn, ip_list)
                 # add to pDNS data
                 self.traffic_monitor.add_to_pDNS(fqdn, ip_list)
+                # add to queried domains:, querier is the destination since packet is a response
+                ip_source = pkt[sc.IP].dst
+                self.traffic_monitor.add_to_queried_domains(ip_source, fqdn)
                 if self.is_in_blacklist(fqdn):
                     self.spoof_DNS(pkt)
                     self.traffic_monitor.add_to_blocked_domains(fqdn)

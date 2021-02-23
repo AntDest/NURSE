@@ -22,6 +22,7 @@ class TrafficMonitor:
         self.active_check_interval = 5
 
         self.device_names = {}      # MAC -> name
+        self.queried_domains = {}
         self.blocked_domains = set()
         self.passive_DNS = {}
         self.arp_table = {}
@@ -72,6 +73,9 @@ class TrafficMonitor:
                 # update passive DNS: for each domain add the new IPs (the IP list is a set)
                 for domain in self.passive_DNS:
                     self.host_state.passive_DNS.setdefault(domain, set()).update(self.passive_DNS[domain])
+
+                # update queried domains
+                self.host_state.queried_domains = self.queried_domains.copy()
 
                 # update ARP table
                 new_ARP = merge_dict(self.host_state.arp_table, self.arp_table)
@@ -127,6 +131,11 @@ class TrafficMonitor:
             self.domain_scores[domain_name] = score
         else:
             self.passive_DNS[domain_name].update(ip_list)
+
+    def add_to_queried_domains(self, ip, fqdn):
+        self.queried_domains.setdefault(ip, []).append(fqdn)
+
+
 
     def add_to_blocked_domains(self, domain_name):
         """adds a domain to the list of domains that have been spoofed"""

@@ -29,6 +29,8 @@ class HostState:
         self.arp_table = {}
         # pDNS table: keys are domains, values are lists of IPs
         self.passive_DNS = {}
+        # Contacted domains: keys are IPs, values are list of queried domains (in DNS)
+        self.queried_domains = {}
         # list of all fqdn that have been spoofed
         self.blocked_domains = set()
         #dict of all flows
@@ -61,8 +63,7 @@ class HostState:
         self.sniffer_thread.stop()
         self.traffic_monitor.stop()
         print("Blocked domains: ", self.blocked_domains)
-        print("Domain scores: ", self.domain_scores)
-        print("Devices: ", self.device_names)
+        print("Queried domains: ", self.queried_domains)
 
 
     def add_to_victim_list(self, ip):
