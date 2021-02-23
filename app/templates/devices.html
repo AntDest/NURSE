@@ -21,7 +21,6 @@
             <td>{{ d.IP }}</td>
             <td>{{ d.name }}</td>
             <td><input type="checkbox" name="scan:{{d.id}}" id="checkbox_device_{{d.id}}" {% if d.victim %}  checked  {% endif %} ></td>
-            
         </tr>
         {% endfor %}
     </table>
