@@ -132,8 +132,8 @@ class TrafficMonitor:
         else:
             self.passive_DNS[domain_name].update(ip_list)
 
-    def add_to_queried_domains(self, ip, fqdn):
-        self.queried_domains.setdefault(ip, []).append(fqdn)
+    def add_to_queried_domains(self, ip, fqdn, timestamp):
+        self.queried_domains.setdefault(ip, []).append((timestamp, fqdn))
 
 
 

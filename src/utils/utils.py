@@ -11,6 +11,17 @@ from typing import NamedTuple
 
 _lock = threading.Lock()
 
+def is_IPv4(ip_string):
+    """Returns true if the string is an IPv4: 4 digits < 255, separated by dots"""
+    digit_list = ip_string.split(".")
+    if len(digit_list) != 4:
+        return False
+    for d in digit_list:
+        if int(d) > 255:
+            return False
+    return True
+
+
 # namedtuple for flows key and flow packets:
 FlowKey = namedtuple("FlowKey",["IP_src", "IP_dst", "port_src", "port_dst", "protocol"])
 class FlowPkt(NamedTuple):

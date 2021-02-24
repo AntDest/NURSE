@@ -1,10 +1,10 @@
 import logging
+from ipaddress import ip_address    #to check if IP is private
 import scapy.all as sc
 
 from src.utils.utils_variables import DNS_RECORD_TYPE
 from src.utils.utils import safe_run, FlowKey, FlowPkt
 
-from ipaddress import ip_address    #to check if IP is private
 
 class PacketParser:
     def __init__(self, host_state, traffic_monitor):
@@ -115,7 +115,7 @@ class PacketParser:
                 self.traffic_monitor.add_to_pDNS(fqdn, ip_list)
                 # add to queried domains:, querier is the destination since packet is a response
                 ip_source = pkt[sc.IP].dst
-                self.traffic_monitor.add_to_queried_domains(ip_source, fqdn)
+                self.traffic_monitor.add_to_queried_domains(ip_source, fqdn, timestamp=int(pkt.time))
                 if self.is_in_blacklist(fqdn):
                     self.spoof_DNS(pkt)
                     self.traffic_monitor.add_to_blocked_domains(fqdn)
@@ -192,7 +192,6 @@ class PacketParser:
 
     def parse_DHCP(self, pkt):
         """Parse DHCP packets in order to get the device names"""
-        pkt.show()
         option_dict = {t[0]: t[1] for t in pkt[sc.DHCP].options if isinstance(t, tuple)}
         #check if there is a device name:
         if "hostname" in option_dict:

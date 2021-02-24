@@ -29,7 +29,7 @@ class HostState:
         self.arp_table = {}
         # pDNS table: keys are domains, values are lists of IPs
         self.passive_DNS = {}
-        # Contacted domains: keys are IPs, values are list of queried domains (in DNS)
+        # Contacted domains: keys are IPs, values are list of tuples (timestamp, queried domains (in DNS))
         self.queried_domains = {}
         # list of all fqdn that have been spoofed
         self.blocked_domains = set()
@@ -98,9 +98,6 @@ class HostState:
         Returns a list of dicts with MAC, IP, name and a boolean which indicates if device is spoofed 
         If a device has no name, the name is \"\"
         """
-        print("ON REQUEST")
-        print(self.device_names)
-        print(self.arp_table)
         devices = []
         for device_id, ip in enumerate(self.arp_table):
             d = {}

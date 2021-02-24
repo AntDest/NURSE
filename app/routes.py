@@ -1,9 +1,10 @@
-import json
 import time
+import logging
 from flask import render_template
 from flask import request
 from app import app
-import logging
+from src.utils.utils import is_IPv4
+
 
 WEBAPP_CONTEXT = {
     "host_state": None
@@ -26,8 +27,8 @@ def timestamp_to_date(t):
 
 
 @app.route('/')
-@app.route('/scores')
-def index():
+@app.route('/domains')
+def domain_list():
     hs = get_host_state()
     with hs.lock:
         domain_scores = hs.domain_scores.copy()
@@ -41,7 +42,6 @@ def index():
         k = key._asdict()
         for key_name in k:
             key_dict[key_name] = getattr(key, key_name)
-        print(key_dict)
         for pkt in flows[key]:
             line_dict = key_dict.copy()
             for key_name in pkt._asdict():
@@ -59,11 +59,9 @@ def index():
 @app.route("/devices")
 def device_list():
     hs = get_host_state()
-    device_list = hs.get_device_list()
-    last_update = hs.last_update
     data = {
-        "last_update": last_update,
-        "device_list": device_list
+        "last_update": hs.last_update,
+        "device_list": hs.get_device_list()
     }
     return render_template("devices.html", data=data)
 
@@ -77,13 +75,12 @@ def update_device():
     # convert true to True and false to False
     enable = (enable == "true")
     hs = get_host_state()
-    print(enable, ip, hs.victim_ip_list)
     if enable and ip not in hs.victim_ip_list:
-        hs.add_to_victim_list(ip)
-        return "True"
+        if is_IPv4(ip):
+            hs.add_to_victim_list(ip)
+            return "True"
     elif not enable and ip in hs.victim_ip_list:
         hs.remove_from_victim_list(ip)
         return "True"
     else:
         return "False"
-
