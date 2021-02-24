@@ -14,12 +14,14 @@
         <tr>
           <th>IP</th>
           <th>Device name</th>
+          <th>Manufacturer</th>
           <th>Scanning</th>
         </tr>
         {% for d in data.device_list %}
         <tr>
             <td>{{ d.IP }}</td>
             <td>{{ d.name }}</td>
+            <td>{{ d.manufacturer }}</td>
             <td><input type="checkbox" class="device_checkbox" name="scan:{{d.id}}" id="checkbox_device_{{d.id}}" {% if d.victim %}  checked  {% endif %} onchange="updateDevice('{{d.IP}}', {{d.id}})" ></td>
         </tr>
         {% endfor %}

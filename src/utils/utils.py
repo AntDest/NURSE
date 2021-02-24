@@ -5,6 +5,8 @@ import traceback
 import threading
 import scapy.all as sc
 import socket
+import requests
+import json
 
 from collections import namedtuple
 from typing import NamedTuple
@@ -20,6 +22,21 @@ def is_IPv4(ip_string):
         if int(d) > 255:
             return False
     return True
+
+
+def get_vendor_from_mac(mac):
+    """Get the vendor from the MAC using an API"""
+    url = "https://mac2vendor.com/api/v4/mac/"
+    mac_str = "".join(mac.split(":")[:3])
+    try:
+        r = requests.get(url + mac_str)
+        response = json.loads(r.text)
+        if not response["success"]:
+            return "Unknown" 
+        else:
+            return response["payload"][0]["vendor"]
+    except:
+        return "Unknown"
 
 
 # namedtuple for flows key and flow packets:

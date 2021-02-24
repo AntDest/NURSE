@@ -4,7 +4,7 @@ import time
 import socket
 from src.utils.utils import merge_dict, FlowKey, FlowPkt
 from src.Classifier import DomainClassifier
-from src.utils.utils import get_mac, get_device_name
+from src.utils.utils import get_mac, get_device_name, get_vendor_from_mac
 
 
 class TrafficMonitor:
@@ -57,17 +57,15 @@ class TrafficMonitor:
         #obtain device name
         if mac not in self.device_names:
             name = get_device_name(ip)
-            self.device_names[mac] = name
+            manufacturer = get_vendor_from_mac(mac)
+            self.device_names[mac] = (name, manufacturer)
 
 
     def updater(self):
         while self.active:
             for ip in self.arp_table:
-                mac = self.arp_table[ip]
-                if mac not in self.device_names:
-                    name = get_device_name(ip)
-                    self.device_names[mac] = name
-
+                self.new_device(ip)
+                
             logging.info("[Monitor] Updating data to host thread")
             with self.host_state.lock:
                 # update passive DNS: for each domain add the new IPs (the IP list is a set)

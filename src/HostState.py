@@ -2,7 +2,7 @@ import logging
 import threading
 import time
 import scapy.all as sc
-from src.utils.utils import get_device_name
+from src.utils.utils import get_device_name, get_vendor_from_mac
 
 class HostState:
     """Host state that starts all threads and stores the global information"""
@@ -40,7 +40,7 @@ class HostState:
         self.flows = {}
         # dict containing scores from the classifier for each domain
         self.domain_scores = {}
-        # dict dontaining device names: mac -> device_names
+        # dict dontaining device names: mac -> (device_name, manufacturer)
         self.device_names = {}
         self.last_update = time.time()
 
@@ -75,12 +75,6 @@ class HostState:
             self.victim_ip_list.remove(ip)
             self.ARP_spoof_thread.arp_restore_victim(ip)
 
-    def add_device_name(self, ip):
-        mac = self.arp_table[ip]
-        if mac not in self.device_names:
-            self.device_names[mac] = get_device_name(ip)
-
-
     def get_arp_table(self):
         with self.lock:
             # return a copy of the arp_table
@@ -90,7 +84,7 @@ class HostState:
         """adds or edits the arp table to add the mapping ip -> mac"""
         with self.lock:
             self.arp_table[ip] = mac
-        self.add_device_name(ip)
+        self.traffic_monitor.new_device(ip)
 
 
     def get_device_list(self):
@@ -106,10 +100,13 @@ class HostState:
             d["IP"] = ip
             d["MAC"] = mac
             if mac in self.device_names:
-                name = self.device_names[mac]
+                name = self.device_names[mac][0]
+                manufacturer = self.device_names[mac][1]
             else:
                 name = ""
+                manufacturer = ""
             d["name"] = name
+            d["manufacturer"] = manufacturer
             d["victim"] = (ip in self.victim_ip_list)
             devices.append(d)
         return devices
