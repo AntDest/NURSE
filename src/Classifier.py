@@ -15,11 +15,13 @@ class DomainClassifier():
         with open(self.source_file, 'rb') as fin:
             self.classifier = pickle.load(fin)
 
+    def delete_file(self):
+        os.remove("classifier.save")
 
     def get_classifier_from_file(self, source):
         if os.path.isdir(source):
-                file_join(source, "classifier.save", FILE_CHUNK_SIZE)
-                self.source_file = "classifier.save"
+            file_join(source, "classifier.save", FILE_CHUNK_SIZE)
+            self.source_file = "classifier.save"
         else:
             self.source_file = source
     

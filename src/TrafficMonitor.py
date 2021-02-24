@@ -42,6 +42,7 @@ class TrafficMonitor:
     def stop(self):
         logging.info("[Monitor] Traffic monitor stopping")
         self.active = False
+        self.classifier.delete_file()
         self.updater_thread.join()
 
 
