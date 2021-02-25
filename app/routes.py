@@ -32,9 +32,26 @@ def domain_list():
     hs = get_host_state()
     with hs.lock:
         domain_scores = hs.domain_scores.copy()
+        queried_domains = hs.queried_domains.copy()
         last_update = hs.last_update
         flows = hs.flows.copy()
-    scores_table = [{"domain":k, "score":v} for k,v in domain_scores.items()]
+    
+    domain_table = []
+    list_devices = []
+    for ip in queried_domains:
+        mac = hs.arp_table[ip]
+        device_name = hs.device_names[mac][0]
+        list_devices.append(device_name)
+        for timestamp, domain in queried_domains[ip]:
+            d = {
+                "timestamp": timestamp,
+                "device": device_name,
+                "domain": domain,
+                "score": domain_scores[domain]
+            }
+            domain_table.append(d)
+    
+    # scores_table = [{"domain":k, "score":v} for k,v in domain_scores.items()]
 
     flows_list = []
     for key in flows:
@@ -49,7 +66,8 @@ def domain_list():
             flows_list.append(line_dict)
 
     data = {
-        "scores": scores_table,
+        "list_devices": list_devices,
+        "domain_table": domain_table,
         "last_update": last_update,
         "flows": flows_list
     }
