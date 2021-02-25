@@ -2,7 +2,6 @@ import time
 import sys
 import logging
 import traceback
-import webbrowser
 
 from src.HostState import HostState
 from src.ARP_spoofer import ARP_spoofer
