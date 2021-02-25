@@ -51,10 +51,12 @@ class TrafficMonitor:
         # obtain mac of IP
         if ip not in self.arp_table:
             mac = get_mac(ip)
+            if mac is None:
+                return
             self.arp_table[ip] = mac
         else:
             mac = self.arp_table[ip]
-        
+
         #obtain device name
         if mac not in self.device_names:
             name = get_device_name(ip)
