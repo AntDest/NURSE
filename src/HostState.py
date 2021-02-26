@@ -1,8 +1,10 @@
 import logging
 import threading
+import requests
 import time
 import scapy.all as sc
 from src.utils.utils import get_device_name, get_vendor_from_mac
+from config import CHECK_IP_URL_LIST
 
 class HostState:
     """Host state that starts all threads and stores the global information"""
@@ -13,6 +15,7 @@ class HostState:
         self.host_ip = None
         self.host_mac = None
         self.gateway_ip = None
+        self.external_ip = None
         self.victim_ip_list = []
         self.interface = None
 
@@ -49,14 +52,14 @@ class HostState:
         logging.info("[Host] Getting connection parameters")
         self.interface, self.host_ip, self.gateway_ip = sc.conf.route.route("0.0.0.0")
         self.host_mac = sc.get_if_hwaddr(self.interface)
-
-
         self.ARP_spoof_thread.victim_ip_list = self.victim_ip_list
         self.ARP_spoof_thread.start()
         self.traffic_monitor.start()
         self.sniffer_thread.start()
         self.server_thread.start()
 
+        self.external_ip = self.get_external_ip()
+        logging.info("[HostState] Your external IP is: %s", self.external_ip)
 
     def stop(self):
         self.ARP_spoof_thread.stop()
@@ -64,6 +67,18 @@ class HostState:
         self.traffic_monitor.stop()
         print("Blocked domains: ", self.blocked_domains)
         print("Queried domains: ", self.queried_domains)
+
+    def get_external_ip(self):
+        # query an API for the exernal IP
+        external_ip = None
+        while external_ip is None:
+            for CHECK_IP_URL in CHECK_IP_URL_LIST:
+                r = requests.get(CHECK_IP_URL)
+                if r.status_code == 200:
+                    external_ip = r.text.strip()
+                    break
+        return external_ip
+        
 
 
     def add_to_victim_list(self, ip):

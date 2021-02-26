@@ -13,6 +13,8 @@ import config
 
 logging_format = "%(asctime)s: %(message)s"
 logging.basicConfig(stream=sys.stdout, format=logging_format, level=logging.DEBUG, datefmt="%H:%M:%S")
+logging.getLogger("requests").setLevel(logging.WARNING)
+logging.getLogger("urllib3").setLevel(logging.WARNING)
 
 logging.info("[Main] Initializing HostState")
 h = HostState()
