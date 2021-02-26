@@ -14,6 +14,7 @@ class PacketParser:
         self.socket = sc.conf.L2socket()
         self.blacklist = self._host_state.blacklist_domains
 
+
     def is_in_blacklist(self, domain):
         """
         Returns True if the fully qualified domain is in the blacklist
@@ -99,7 +100,6 @@ class PacketParser:
         return domain_name, response_list
 
 
-
     def parse_DNS(self, pkt):
         is_DNS_query = (pkt[sc.DNS].qr == 0)
         if is_DNS_query:
@@ -149,7 +149,8 @@ class PacketParser:
                 # do not query your own device
                 if queried_ip != self._host_state.host_ip:
                     self.traffic_monitor.new_device(queried_ip)
-    
+
+
     def parse_TCP_UDP(self, pkt, protocol):
         """
         Parse a TCP packet to extract information and send it to the traffic monitor
@@ -188,7 +189,7 @@ class PacketParser:
             timestamp=int(pkt.time)
         )
         self.traffic_monitor.add_to_flow(flow_key, pkt_attributes)
-        
+
 
     def parse_DHCP(self, pkt):
         """Parse DHCP packets in order to get the device names"""
@@ -199,7 +200,7 @@ class PacketParser:
             hostname = option_dict["hostname"].decode("utf-8")
             with self._host_state.lock:
                 self._host_state.device_names[device_mac] = hostname
-        
+
 
     def parse_packet(self, pkt):
         try:
@@ -211,7 +212,7 @@ class PacketParser:
             if sc.IP in pkt:
                 if pkt[sc.IP].dst == self._host_state.host_ip:
                     #do not parse packets destined to our host
-                    return 
+                    return
                 if pkt[sc.IP].dst in self._victim_list or pkt[sc.IP].src in self._victim_list or pkt[sc.IP].dst == "255.255.255.255":
                     # packet from or to IPs that are not victims
                     if sc.DNS in pkt:
