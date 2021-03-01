@@ -9,6 +9,8 @@ from src.Sniffer import Sniffer
 from src.PacketParser import PacketParser
 from src.TrafficMonitor import TrafficMonitor
 from src.Server import Server
+from src.AlertManager import AlertManager
+from src.TrafficAnalyzer import TrafficAnalyzer
 import config
 
 logging_format = "%(asctime)s: %(message)s"
@@ -29,6 +31,8 @@ try:
     h.packet_parser = PacketParser(h, h.traffic_monitor)
     h.sniffer_thread = Sniffer(h, h.packet_parser)
     h.server_thread = Server(h)
+    h.alert_manager = AlertManager(h)
+    h.traffic_analyzer = TrafficAnalyzer(h)
     logging.info("[Main] Starting child threads")
     h.start()
     if config.QUIT_AFTER > 0:

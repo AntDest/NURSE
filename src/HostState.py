@@ -25,7 +25,8 @@ class HostState:
         self.packet_parser = None
         self.traffic_monitor = None
         self.server_thread = None
-
+        self.alert_manager = None
+        self.traffic_analyzer = None
 
         # global data storage about traffic
         # ARP table that will be modified on the go
@@ -57,6 +58,7 @@ class HostState:
         self.traffic_monitor.start()
         self.sniffer_thread.start()
         self.server_thread.start()
+        self.traffic_analyzer.start()
 
         self.external_ip = self.get_external_ip()
         logging.info("[HostState] Your external IP is: %s", self.external_ip)
@@ -65,8 +67,13 @@ class HostState:
         self.ARP_spoof_thread.stop()
         self.sniffer_thread.stop()
         self.traffic_monitor.stop()
+        self.traffic_analyzer.stop()
         print("Blocked domains: ", self.blocked_domains)
         print("Queried domains: ", self.queried_domains)
+        if len(self.alert_manager.alert_list) > 0:
+            print("Alerts: ")
+            for a in self.alert_manager.alert_list:
+                print(a)
 
     def get_external_ip(self):
         # query an API for the exernal IP
