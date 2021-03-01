@@ -1,5 +1,4 @@
 from collections import Counter
-import sklearn.feature_extraction
 import wordninja
 import math
 from src.utils.utils_variables import ENGLISH_WORDS, IANA_TLD_LIST, LETTERS, CONSONANTS, VOWELS, DIGITS, VALID_CHARS
@@ -82,26 +81,9 @@ def feature_ngrams_distribution(domain, n):
     return s_mean, s_std
 
 
-# Define the ngram counter
-# look for ngrams between 3 and 5 characters
-_english_ngrams_min_size = 3
-_english_ngrams_max_size = 5
-# min_df drops ngrams with frequency less than a threshold,
-# can affect precision, and speed up a bit the computation for the scores
-_ngram_freq_threshold = 1e-5
-english_counter = sklearn.feature_extraction.text.CountVectorizer(
-    analyzer='char',
-    ngram_range=(_english_ngrams_min_size, _english_ngrams_max_size),
-    min_df=_ngram_freq_threshold
-)
-# Compute the ngrams counts over the English dictionary
-english_counts_matrix = english_counter.fit_transform(ENGLISH_WORDS)
-english_counts = english_counts_matrix.sum(axis=0).getA1()
-english_counts = np.log10(english_counts)
 
 
-def feature_english_score(domain):
-    global english_counter, english_counts
+def feature_english_score(domain, english_counter, english_counts):
     d = ignore_TLD(domain)
     score = english_counts * english_counter.transform([d]).T
     return score
@@ -234,7 +216,7 @@ feature_function_list = {
     "word_count": feature_word_count,   # put first as slower than the others
     "3gram_avg": None,  # none since the feature computation will be done in another way
     "3gram_std": None,
-    "english_score": feature_english_score
+    "english_score": None # computed in the classifier
 }
 
 features_types = {
