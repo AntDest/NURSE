@@ -202,6 +202,25 @@ class PacketParser:
                 self._host_state.device_names[device_mac] = hostname
 
 
+    def check_IP_layer(self, pkt):
+        """Check the IP layer for unusual behavior: IP spoofing"""
+        external_IP = self._host_state.external_ip
+        victims_IP = self._host_state.victim_ip_list.copy()
+        # determine if packet is query or answer:
+        # if the source MAC is a victim's MAC, then it is a query
+        try:
+            victims_MAC = [self._host_state.arp_table[ip] for ip in victims_IP]
+        except KeyError:
+            return
+
+        # if it is a victim MAC: the packet is a query 
+        if pkt[sc.Ether].src in victims_MAC:
+            # get IP that corresponds to MAC by reversing the ARP table
+            mac_associated_IP = self._host_state.arp_table.keys()[self._host_state.arp_table.values().index(pkt[sc.Ether].src)]
+            if (pkt[sc.IP].src != mac_associated_IP) and (pkt[sc.IP].src != external_IP):
+                logging.warning("[PacketParser] Unknown source IP %s used by MAC %s, may be a spoofed IP", pkt[sc.IP].src, pkt[sc.Ether].src)
+                # TODO: send to alert manager
+
     def parse_packet(self, pkt):
         try:
             if pkt[sc.Ether].src == self._host_state.host_mac:
@@ -213,6 +232,7 @@ class PacketParser:
                 if pkt[sc.IP].dst == self._host_state.host_ip:
                     #do not parse packets destined to our host
                     return
+                self.check_IP_layer(pkt)
                 if pkt[sc.IP].dst in self._victim_list or pkt[sc.IP].src in self._victim_list or pkt[sc.IP].dst == "255.255.255.255":
                     # packet from or to IPs that are not victims
                     if sc.DNS in pkt:
