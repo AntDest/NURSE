@@ -113,9 +113,6 @@ class PacketParser:
                 logging.debug("[Packet Parser] Domain %s, ip list %s", fqdn, ip_list)
                 # add to pDNS data
                 self.traffic_monitor.add_to_pDNS(fqdn, ip_list)
-                # add to queried domains:, querier is the destination since packet is a response
-                ip_source = pkt[sc.IP].dst
-                self.traffic_monitor.add_to_queried_domains(ip_source, fqdn, timestamp=int(pkt.time))
                 if self.is_in_blacklist(fqdn):
                     self.spoof_DNS(pkt)
                     self.traffic_monitor.add_to_blocked_domains(fqdn)
@@ -129,6 +126,9 @@ class PacketParser:
                     logging.debug("[Packet Parser] Domain %s does not exist", fqdn)
                     self.traffic_monitor.add_to_pDNS(fqdn, [])
                     self.forward_packet(pkt)
+            # add to queried domains:, querier is the destination since packet is a response
+            ip_source = pkt[sc.IP].dst
+            self.traffic_monitor.add_to_queried_domains(ip_source, fqdn, timestamp=int(pkt.time))
 
 
     def parse_ARP(self, pkt):
@@ -216,10 +216,13 @@ class PacketParser:
         # if it is a victim MAC: the packet is a query 
         if pkt[sc.Ether].src in victims_MAC:
             # get IP that corresponds to MAC by reversing the ARP table
-            mac_associated_IP = self._host_state.arp_table.keys()[self._host_state.arp_table.values().index(pkt[sc.Ether].src)]
-            if (pkt[sc.IP].src != mac_associated_IP) and (pkt[sc.IP].src != external_IP):
-                logging.warning("[PacketParser] Unknown source IP %s used by MAC %s, may be a spoofed IP", pkt[sc.IP].src, pkt[sc.Ether].src)
-                # TODO: send to alert manager
+            list_IPs = list(self._host_state.arp_table.values())
+            list_MACs = list(self._host_state.arp_table.keys())
+            mac_associated_IP = list_MACs[list_IPs.index(pkt[sc.Ether].src)]
+            packet_IP = pkt[sc.IP].src
+            if (packet_IP != mac_associated_IP) and (packet_IP != external_IP):
+                logging.warning("[PacketParser] Unknown source IP %s used by MAC %s, may be a spoofed IP", packet_IP, pkt[sc.Ether].src)
+                self._host_state.alert_manager.new_alert_IP_spoofed(mac_associated_IP, packet_IP)
 
     def parse_packet(self, pkt):
         try:
