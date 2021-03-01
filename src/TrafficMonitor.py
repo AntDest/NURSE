@@ -29,14 +29,12 @@ class TrafficMonitor:
         self.flows = {}
         self.domain_scores = {}
 
-        logging.info("[TrafficMonitor] Initialising classifier")
-        self.classifier = DomainClassifier()
-
     def start(self):
         with self.lock:
             self.active = True
+        logging.info("[TrafficMonitor] Initialising classifier")
+        self.classifier = DomainClassifier()
         logging.info("[Monitor] Traffic monitor starting")
-        # copy the ARP table of the host state, which has some info?
         self.updater_thread.start()
 
     def stop(self):
