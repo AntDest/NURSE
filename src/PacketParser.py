@@ -113,6 +113,9 @@ class PacketParser:
                 logging.debug("[Packet Parser] Domain %s, ip list %s", fqdn, ip_list)
                 # add to pDNS data
                 self.traffic_monitor.add_to_pDNS(fqdn, ip_list)
+                # add to queried domains:, querier is the destination since packet is a response
+                ip_source = pkt[sc.IP].dst
+                self.traffic_monitor.add_to_queried_domains(ip_source, fqdn, timestamp=int(pkt.time))
                 if self.is_in_blacklist(fqdn):
                     self.spoof_DNS(pkt)
                     self.traffic_monitor.add_to_blocked_domains(fqdn)
@@ -126,9 +129,9 @@ class PacketParser:
                     logging.debug("[Packet Parser] Domain %s does not exist", fqdn)
                     self.traffic_monitor.add_to_pDNS(fqdn, [])
                     self.forward_packet(pkt)
-            # add to queried domains:, querier is the destination since packet is a response
-            ip_source = pkt[sc.IP].dst
-            self.traffic_monitor.add_to_queried_domains(ip_source, fqdn, timestamp=int(pkt.time))
+                    # add to queried domains:, querier is the destination since packet is a response
+                    ip_source = pkt[sc.IP].dst
+                    self.traffic_monitor.add_to_queried_domains(ip_source, fqdn, timestamp=int(pkt.time))
 
 
     def parse_ARP(self, pkt):
@@ -183,10 +186,14 @@ class PacketParser:
             port_dst=port_dst,
             protocol=protocol
         )
+        flags = ""
+        if proto == sc.TCP:
+            flags = pkt.sprintf('%TCP.flags%')
         pkt_attributes = FlowPkt(
             inbound=inbound,
             size=len(pkt[proto].payload),
-            timestamp=int(pkt.time)
+            timestamp=int(pkt.time),
+            flags=flags
         )
         self.traffic_monitor.add_to_flow(flow_key, pkt_attributes)
 
