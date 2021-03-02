@@ -60,6 +60,14 @@ class TrafficMonitor:
             name = get_device_name(ip)
             manufacturer = get_vendor_from_mac(mac)
             self.device_names[mac] = (name, manufacturer)
+    
+    
+    def sleep(self, seconds):
+        """Sleep for given seconds, but check if still active every second"""
+        for _ in range(seconds):
+            if not self.active:
+                break
+            time.sleep(1)
 
 
     def updater(self):
@@ -111,18 +119,7 @@ class TrafficMonitor:
             # end of lock
             # wait until next iteration,
             # split waiting time into small waits to check if process is still active
-            for seconds_waited in range(0, self.update_delay, self.active_check_interval):
-                if not self.active:
-                    # break from this waiting loop
-                    break
-                if (self.update_delay - seconds_waited) > self.active_check_interval:
-                    # wait for the check interval duration
-                    time.sleep(self.active_check_interval)
-                else:
-                    # if the check interval is longer than the wait until the next update
-                    # only wait until the next update
-                    time.sleep((self.update_delay - seconds_waited))
-
+            self.sleep(self.update_delay)
 
     def score_domain(self, domain):
         X = self.classifier.compute_features(domain)
