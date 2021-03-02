@@ -7,6 +7,7 @@ import scapy.all as sc
 import socket
 import requests
 import json
+import time
 
 from collections import namedtuple
 from typing import NamedTuple
@@ -45,7 +46,7 @@ class FlowPkt(NamedTuple):
     inbound: bool
     size: int
     timestamp: int
-
+    flags: str
 
 def merge_dict(x,y):
     z = x.copy()   # start with x's keys and values
@@ -60,6 +61,16 @@ class _SafeRunError(object):
 
     def __init__(self):
         pass
+
+def restart_on_error(func, args=[], kwargs={}):
+    """restarts when a saferun error is encountered"""
+    while True:
+        result = safe_run(func, args, kwargs)
+        if isinstance(result, _SafeRunError):
+            time.sleep(1)
+            continue
+
+        return result
 
 
 def safe_run(func, args=[], kwargs={}):
@@ -77,7 +88,7 @@ def safe_run(func, args=[], kwargs={}):
 
         with _lock:
             sys.stderr.write(err_msg + '\n')
-            logging.error(err_msg)
+            # logging.error(err_msg)
 
         return _SafeRunError()
 
