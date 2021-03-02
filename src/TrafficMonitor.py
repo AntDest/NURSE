@@ -74,7 +74,20 @@ class TrafficMonitor:
                     self.host_state.passive_DNS.setdefault(domain, set()).update(self.passive_DNS[domain])
 
                 # update queried domains
-                self.host_state.queried_domains = self.queried_domains.copy()
+                # do not use copy(), simply add the new data
+                for ip in self.queried_domains:
+                    new_tuples = []
+                    for t in reversed(self.queried_domains[ip]):
+                        if t not in self.host_state.queried_domains:
+                            new_tuples.append(t)
+                        else:
+                            break
+                    # reverse data to keep chronological order in queried domains
+                    new_data = new_tuples[::-1]
+                    if ip not in self.host_state.queried_domains:
+                        self.host_state.queried_domains[ip] = new_data
+                    else:
+                        self.host_state.queried_domains[ip] += new_data
 
                 # update ARP table
                 new_ARP = merge_dict(self.host_state.arp_table, self.arp_table)
@@ -122,7 +135,7 @@ class TrafficMonitor:
         """Called by the packet_parser when a new domain appears in a DNS response
         Adds the domain to the pDNS database (note that the responses may be spoofed, so some IPs will not be contacted)
         """
-        # add to pDNS database in host_state
+        # add to pDNS database
         if domain_name not in self.passive_DNS:
             self.passive_DNS[domain_name] = set(ip_list)
             # new domain: compute its score
