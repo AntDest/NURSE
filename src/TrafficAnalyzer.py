@@ -144,11 +144,14 @@ class TrafficAnalyzer():
         self.detect_dos_on_port(syn_counts)
 
     def analyzer(self):
+        import datetime
         while self.active:
             # TODO: if scanning PCAP, do not use time.time() !
             stop_time = time.time()
             start_time = stop_time - self.TIME_WINDOW
-            logging.debug("[Analyzer] Analyzing data to detect alerts")
+            h1 = datetime.datetime.fromtimestamp(start_time).strftime('%H:%M:%S')
+            h2 = datetime.datetime.fromtimestamp(stop_time).strftime('%H:%M:%S')
+            logging.debug("[Analyzer] Analyzing data to detect alerts between %s and %s (window = %d)", h1, h2, self.TIME_WINDOW)
             self.detect_alerts(start_time, stop_time)
             self.sleep(self.iteration_time)
 
