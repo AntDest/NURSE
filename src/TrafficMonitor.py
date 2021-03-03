@@ -1,7 +1,6 @@
 import threading
 import logging
 import time
-import socket
 from src.utils.utils import merge_dict, FlowKey, FlowPkt
 from src.Classifier import DomainClassifier
 from src.utils.utils import get_mac, get_device_name, get_vendor_from_mac
@@ -29,6 +28,8 @@ class TrafficMonitor:
         self.flows = {}
         self.domain_scores = {}
 
+        self.classifier = None
+    
     def start(self):
         with self.lock:
             self.active = True
