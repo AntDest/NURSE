@@ -16,6 +16,8 @@ class TrafficAnalyzer():
         self.thread.daemon = True
         self.lock = threading.Lock()
 
+        self.start_time = 0
+        self.stop_time = 0
     def start(self):
         with self.lock:
             self.active = True
@@ -35,7 +37,7 @@ class TrafficAnalyzer():
                 break
             time.sleep(1)
 
-    def count_NXDOMAIN_per_IP(self, start_time, stop_time):
+    def count_NXDOMAIN_per_IP(self):
         """
         Analyze NXDOMAINS in the last time window, 
         sends an alert to the alert manager if there are more than threshold per time window
@@ -48,9 +50,9 @@ class TrafficAnalyzer():
             # read from the end, and break when timestamp is too old
             for query in reversed(queried_domains[ip]):
                 ts = query[0]
-                if ts > stop_time:
+                if ts > self.stop_time:
                     continue
-                elif ts < start_time:
+                elif ts < self.start_time:
                     break
 
                 domain = query[1]
@@ -63,7 +65,7 @@ class TrafficAnalyzer():
             nxdomains_counts_per_IP[ip] = nxdomain_count
         return nxdomains_counts_per_IP
 
-    def count_TCP_flag_packets(self, flag, start_time, stop_time):
+    def count_TCP_flag_packets(self, flag):
         """counts packets with the exact same flags sent by a host to a remote IP in the time window"""
         # keys are FlowKey, values are SYN counts in the time window
         flag_counts = {} 
@@ -71,9 +73,9 @@ class TrafficAnalyzer():
             # read packets from end to beginning
             packets = reversed(self.host_state.flows[flow])
             for p in packets:
-                if p.timestamp > stop_time:
+                if p.timestamp > self.stop_time:
                     continue
-                elif p.timestamp < start_time:
+                elif p.timestamp < self.start_time:
                     break
                 if p.flags == flag:
                     flag_counts[flow] = flag_counts.get(flow, 0) + 1
@@ -85,7 +87,10 @@ class TrafficAnalyzer():
         for ip in nxdomain_counts:
             if nxdomain_counts[ip] > MAX_NXDOMAIN:
                 print("ALERT: too many NXDOMAIN from host ", ip)
-                # TODO: raise alert
+                timestamp_start = self.start_time
+                timestamp_end = self.stop_time
+                nxcount = nxdomain_counts[ip]
+                self.host_state.alert_manager.new_alert_nxdomain(ip, timestamp_start, timestamp_end, nxcount)
 
     def detect_vertical_port_scan(self, syn_counts):
         """
@@ -97,13 +102,18 @@ class TrafficAnalyzer():
             if key not in ports_contacted: 
                 ports_contacted[key] = set()
             ports_contacted[key].add(getattr(flow, "port_dst"))
-
+        print(ports_contacted)
         for key in ports_contacted:
             if len(ports_contacted[key]) > MAX_PORTS_PER_HOST:
                 print(f"ALERT: port scanning on {key}: {len(ports_contacted[key])} port contacted ", ports_contacted[key])
-                # TODO: raise alert
+                host_IP = key[0]
+                target_IP = key[1]
+                timestamp_start = self.start_time
+                timestamp_end = self.stop_time
+                port_count = len(ports_contacted[key])
+                self.host_state.alert_manager.new_alert_portscan(host_IP, target_IP, timestamp_start, timestamp_end, port_count)
 
-    def detect_ddos_on_port(self, syn_counts):
+    def detect_dos_on_port(self, syn_counts):
         """Detects if one IP:port combination has received too many SYN packets"""
         syn_on_port = {}
         # merge by IP_src, IP_dst, port_dst (do use the source port in key)
@@ -113,27 +123,32 @@ class TrafficAnalyzer():
         for key in syn_on_port:
             if syn_on_port[key] > MAX_CONNECTIONS_PER_PORT:
                 print(f"ALERT: DDoS {key[0]} has initiated {syn_on_port[key]} connections with {key[1]}:{key[2]}")
-                # TODO: raise alert
+                host_IP = key[0]
+                target_IP = key[1]
+                timestamp_start = self.start_time
+                timestamp_end = self.stop_time
+                conn_count = syn_on_port[key]
+                self.host_state.alert_manager.new_alert_dos(host_IP, target_IP, timestamp_start, timestamp_end, conn_count)
 
 
 
     def detect_alerts(self, start_time, stop_time):
-        if start_time > stop_time:
-            start_time, stop_time = stop_time, start_time
-        # count data
-        nxdomain_counts = self.count_NXDOMAIN_per_IP(start_time, stop_time)
-        syn_counts = self.count_TCP_flag_packets("S", start_time, stop_time)
+        self.start_time = start_time
+        self.stop_time = stop_time
+        nxdomain_counts = self.count_NXDOMAIN_per_IP()
+        syn_counts = self.count_TCP_flag_packets("S")
         
         # analyze data and raise alerts if something is suspicious
         self.detect_nxdomain_alert(nxdomain_counts)
         self.detect_vertical_port_scan(syn_counts)
-        self.detect_ddos_on_port(syn_counts)
+        self.detect_dos_on_port(syn_counts)
 
     def analyzer(self):
         while self.active:
             # TODO: if scanning PCAP, do not use time.time() !
             stop_time = time.time()
             start_time = stop_time - self.TIME_WINDOW
+            logging.debug("[Analyzer] Analyzing data to detect alerts")
             self.detect_alerts(start_time, stop_time)
             self.sleep(self.iteration_time)
 
