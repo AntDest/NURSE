@@ -229,7 +229,8 @@ class PacketParser:
             packet_IP = pkt[sc.IP].src
             if (packet_IP != mac_associated_IP) and (packet_IP != external_IP):
                 logging.warning("[PacketParser] Unknown source IP %s used by MAC %s, may be a spoofed IP", packet_IP, pkt[sc.Ether].src)
-                self._host_state.alert_manager.new_alert_IP_spoofed(mac_associated_IP, packet_IP)
+                timestamp = pkt.time
+                self._host_state.alert_manager.new_alert_IP_spoofed(mac_associated_IP, packet_IP, timestamp)
 
     def parse_packet(self, pkt):
         try:

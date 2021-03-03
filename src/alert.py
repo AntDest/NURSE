@@ -3,7 +3,7 @@ class Alert():
     severity = 0
     name = "Alert"
     message = "Basic Alert"
-
+    timestamp = 0
     def __init__(self, severity, message=""):
         self.message = message
         self.severity = severity
@@ -20,11 +20,10 @@ class Alert():
 
 class AlertIPSpoofed(Alert):
     name = "IP Spoofed Alert"
-    def __init__(self, host_IP, spoofed_IP):
+    def __init__(self, host_IP, spoofed_IP, timestamp):
         severity = 2
         self.host_IP = host_IP
         self.spoofed_IP = spoofed_IP
+        self.timestamp = timestamp
         message = f"{host_IP} used a spoofed IP {spoofed_IP}"
         super().__init__(severity, message)
-        
-    
