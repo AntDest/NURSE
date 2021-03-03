@@ -1,7 +1,7 @@
 import time
 import threading
-import scapy.all as sc
 import logging
+import scapy.all as sc
 
 class ARP_spoofer:
     def __init__(self, host_state):

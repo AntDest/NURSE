@@ -1,9 +1,8 @@
 import logging
 import threading
-import requests
 import time
+import requests
 import scapy.all as sc
-from src.utils.utils import get_device_name, get_vendor_from_mac
 from config import CHECK_IP_URL_LIST
 
 class HostState:

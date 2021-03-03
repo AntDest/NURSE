@@ -1,9 +1,11 @@
 import os
-import pandas as pd
 import pickle
+import pandas as pd
+import numpy as np
+import sklearn.feature_extraction
 from src.utils.utils_file import file_join, FILE_CHUNK_SIZE
 from src.utils.features import *
-import sklearn.feature_extraction
+from src.utils.utils_variables import ENGLISH_WORDS
 
 class DomainClassifier():
     classifier = None
@@ -64,13 +66,9 @@ class DomainClassifier():
                 df_features["english_score"] = self.compute_english_score(ignore_TLD(domain))
             else:
                 feature_function = feature_function_list[feature]
-                df_features[feature] = df_features['domain'].apply(lambda x: feature_function(x))
+                df_features[feature] = df_features['domain'].apply(feature_function)
 
         df_features = df_features.astype(features_types)
         df_features = df_features.drop(["domain"], axis=1)
 
         return df_features.to_numpy()
-    
-
-
-
