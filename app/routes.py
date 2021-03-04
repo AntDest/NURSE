@@ -40,7 +40,10 @@ def domain_list():
     list_devices = []
     for ip in queried_domains:
         mac = hs.arp_table[ip]
-        device_name = hs.device_names[mac][0]
+        if mac in hs.device_names:
+            device_name = hs.device_names[mac][0]
+        else:
+            device_name = ip
         list_devices.append(device_name)
         for timestamp, domain in queried_domains[ip]:
             d = {
