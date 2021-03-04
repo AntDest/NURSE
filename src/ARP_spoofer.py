@@ -5,7 +5,7 @@ import scapy.all as sc
 
 class ARP_spoofer:
     def __init__(self, host_state):
-        self._host_state = host_state
+        self.host_state = host_state
         self.lock = threading.Lock()
         self._active = False
         self._thread = threading.Thread(target=self.arp_spoof_loop)
@@ -52,11 +52,11 @@ class ARP_spoofer:
 
     def arp_restore_victim(self, ip_victim):
         """Restores ARP for a victim"""
-        ip_to_mac = self._host_state.get_arp_table()
+        ip_to_mac = self.host_state.get_arp_table()
         mac_victim = ip_to_mac[ip_victim]
-        with self._host_state.lock:
-            ip_gateway = self._host_state.gateway_ip
-            mac_gateway = ip_to_mac[self._host_state.gateway_ip]
+        with self.host_state.lock:
+            ip_gateway = self.host_state.gateway_ip
+            mac_gateway = ip_to_mac[self.host_state.gateway_ip]
             sc.send(sc.ARP(op=2, hwdst="ff:ff:ff:ff:ff:ff", pdst=ip_gateway, hwsrc=mac_victim, psrc=ip_victim), verbose=False)
             sc.send(sc.ARP(op=2, hwdst="ff:ff:ff:ff:ff:ff", pdst=ip_victim, hwsrc=mac_gateway, psrc=ip_gateway), verbose=False)
 
@@ -78,17 +78,17 @@ class ARP_spoofer:
                     return
 
             # logging.debug("[ARP spoofer] Obtaining the ARP table")
-            with self._host_state.lock:
-                if self._host_state.gateway_ip is None:
+            with self.host_state.lock:
+                if self.host_state.gateway_ip is None:
                     logging.error("[ARP spoofer] Gateway IP is not set")
                     return
-                gateway_ip = self._host_state.gateway_ip
+                gateway_ip = self.host_state.gateway_ip
                 if self.gateway_mac is None:
-                    self.gateway_mac = self.get_mac(self._host_state.gateway_ip)
+                    self.gateway_mac = self.get_mac(self.host_state.gateway_ip)
             gateway_mac = self.gateway_mac
-            self._host_state.set_arp_table(gateway_ip, gateway_mac)
+            self.host_state.set_arp_table(gateway_ip, gateway_mac)
 
-            ip_to_mac = self._host_state.get_arp_table()
+            ip_to_mac = self.host_state.get_arp_table()
 
             # logging.debug("[ARP spoofer] Victims to spoof: %s" , self.victim_ip_list)
             for victim_ip in self.victim_ip_list:
@@ -98,13 +98,13 @@ class ARP_spoofer:
                     logging.debug("[ARP spoofer] obtaining MAC of %s", victim_ip)
                     mac = self.get_mac(victim_ip)
                     if mac is not None:
-                        self._host_state.set_arp_table(victim_ip, mac)
+                        self.host_state.set_arp_table(victim_ip, mac)
                         victim_mac = mac
                     else:
                         logging.warning("[ARP spoofer] Could not obtain MAC of %s, not spoofing this host", victim_ip)
                         continue
                 # logging.debug("[ARP spoofer] Sending ARP spoofing packets to %s", victim_ip)
-                mac_host = self._host_state.host_mac
+                mac_host = self.host_state.host_mac
                 self.arp_spoof(gateway_mac, victim_mac, gateway_ip, victim_ip, mac_host)
                 self.has_spoofed = True
 
