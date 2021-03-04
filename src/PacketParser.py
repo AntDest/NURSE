@@ -3,7 +3,7 @@ from ipaddress import ip_address    #to check if IP is private
 import scapy.all as sc
 
 from src.utils.utils_variables import DNS_RECORD_TYPE
-from src.utils.utils import safe_run, FlowKey, FlowPkt
+from src.utils.utils import safe_run, FlowKey, FlowPkt, disable_if_offline
 
 
 class PacketParser:
@@ -11,9 +11,9 @@ class PacketParser:
         self.host_state = host_state
         self.traffic_monitor = traffic_monitor
         self._victim_list = self.host_state.victim_ip_list
-        self.socket = sc.conf.L2socket()
         self.blacklist = self.host_state.blacklist_domains
-
+        if self.host_state.online:
+            self.socket = sc.conf.L2socket()
 
     def is_in_blacklist(self, domain):
         """
@@ -29,7 +29,7 @@ class PacketParser:
                 return True
         return False
 
-
+    @disable_if_offline
     def forward_packet(self, pkt):
         """Forwards packets in the ARP spoofing"""
         # reference for forwarding: https://stackoverflow.com/questions/61857033/scapy-how-to-forward-packets-after-using-arpspoof
@@ -70,7 +70,7 @@ class PacketParser:
             #         logging.debug("[Packet Parser] Packet to a not spoofed device: %s", dst_ip)
             # else: logging.debug("Neither to victim or to gateway: MAC: %s -> %s, IP: %s -> %s, victim list %s", src_mac, dst_mac, src_ip, dst_ip, self._victim_list)
 
-
+    @disable_if_offline
     def spoof_DNS(self, pkt):
         """Takes a DNS response and spoof it if it is a blacklisted domain, replaces DNS response with our host IP to prevent packets from reaching the domain"""
         host_ip = self.host_state.host_ip
@@ -166,7 +166,7 @@ class PacketParser:
         else:
             raise Exception(f"Unknown protocol {protocol}")
         #determine if packet is outbound or inboud:
-        if pkt[sc.IP].src in self._victim_list:
+        if pkt[sc.IP].src in self._victim_list or pkt[sc.IP].dst == "255.255.255.255":
             ip_src = pkt[sc.IP].src
             ip_dst = pkt[sc.IP].dst
             port_src = pkt[proto].sport
@@ -234,6 +234,9 @@ class PacketParser:
 
     def parse_packet(self, pkt):
         try:
+            if not sc.Ether in pkt:
+                pkt.summary()
+                return
             if pkt[sc.Ether].src == self.host_state.host_mac:
                 # do not parse outcoming packets
                 return

@@ -1,6 +1,5 @@
 import datetime
 import logging
-import sys
 import traceback
 import threading
 import scapy.all as sc
@@ -12,7 +11,36 @@ import time
 from collections import namedtuple
 from typing import NamedTuple
 
+from src.HostState import HostState
+
 _lock = threading.Lock()
+
+
+class StopProgramException(Exception):
+    pass
+
+
+def disable_if_offline(f):
+    def wrapper(*args):
+        if len(args) > 0 and hasattr(args[0], "host_state") and isinstance(args[0].host_state, HostState):
+            # if we have a host_state
+            if args[0].host_state.online:
+                # we are online, run the function:
+                return f(*args)
+            else:
+                # do not run the function as we are in offline mode
+                # logging.debug("Disabled function %s.%s in offline mode", args[0].__class__.__name__, f.__name__)
+                pass
+        else:
+            print("Decorator ERROR: ", args, hasattr(args[0], "host_state"))
+    return wrapper
+
+
+
+
+
+
+
 
 def is_IPv4(ip_string):
     """Returns true if the string is an IPv4: 4 digits < 255, separated by dots"""
@@ -87,8 +115,7 @@ def safe_run(func, args=[], kwargs={}):
         err_msg += str(traceback.format_exc()) + '\n\n\n'
 
         with _lock:
-            sys.stderr.write(err_msg + '\n')
-            # logging.error(err_msg)
+            logging.error(err_msg)
 
         return _SafeRunError()
 
@@ -101,7 +128,6 @@ def get_mac(ip_address):
         return mac_query_response[sc.ARP].hwsrc
     # if no response, return None
     return None
-
 
 
 def get_device_name(ip):

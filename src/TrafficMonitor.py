@@ -3,8 +3,8 @@ import logging
 import time
 from src.utils.utils import merge_dict, FlowKey, FlowPkt
 from src.Classifier import DomainClassifier
-from src.utils.utils import get_mac, get_device_name, get_vendor_from_mac
-
+from src.utils.utils import get_mac, get_device_name, get_vendor_from_mac, disable_if_offline
+from src.utils.utils import StopProgramException
 
 class TrafficMonitor:
     """
@@ -18,7 +18,6 @@ class TrafficMonitor:
         self.lock = threading.Lock()
         self.active = True
         self.update_delay = update_delay
-        self.active_check_interval = 5
 
         self.device_names = {}      # MAC -> name
         self.queried_domains = {}
@@ -29,6 +28,7 @@ class TrafficMonitor:
         self.domain_scores = {}
 
         self.classifier = None
+
     
     def start(self):
         with self.lock:
@@ -45,6 +45,8 @@ class TrafficMonitor:
         self.updater_thread.join()
 
 
+    # active discovery function, so disabled when offline
+    @disable_if_offline
     def new_device(self, ip):
         """Gathers info and adds the device to ARP table and device names"""
         # obtain mac of IP

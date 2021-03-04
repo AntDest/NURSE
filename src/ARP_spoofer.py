@@ -2,6 +2,7 @@ import time
 import threading
 import logging
 import scapy.all as sc
+from src.utils.utils import get_mac, disable_if_offline
 
 class ARP_spoofer:
     def __init__(self, host_state):
@@ -16,7 +17,9 @@ class ARP_spoofer:
         self.victim_ip_list = []
         self.gateway_mac = None
         self.has_spoofed = False
-
+    
+    # Do not start the ARP spoofer if offline
+    @disable_if_offline
     def start(self):
         """starts the ARP spoofing thread. To be called by host state"""
         with self.lock:
@@ -24,6 +27,7 @@ class ARP_spoofer:
         logging.info("[ARP spoofer] ARP spoofing starting")
         self._thread.start()
 
+    @disable_if_offline
     def stop(self):
         """stops the ARP spoofing thread, to be called by host state to end the thread"""
         logging.info("[ARP spoofer] ARP spoofing stopping")
@@ -34,22 +38,15 @@ class ARP_spoofer:
         self._thread.join()
         return
 
-    def get_mac(self, ip_address):
-        """Sends an ARP request and waits for a reply to obtain the MAC of the given IP address"""
-        mac_query = sc.ARP(op = 1, hwdst = "ff:ff:ff:ff:ff:ff", pdst = ip_address)
-        mac_query_ans, _ = sc.sr(mac_query, timeout=5, verbose=False)
-        for _, mac_query_response in mac_query_ans:
-            return mac_query_response[sc.ARP].hwsrc
-        # if no response, return None
-        return None
-
+    @disable_if_offline
     def arp_spoof(self, mac_gateway, mac_victim, ip_gateway, ip_victim, mac_host):
         """Sends 2 spoofing ARP packets"""
         #trick gateway
         sc.send(sc.ARP(op=2, pdst=ip_gateway, hwdst=mac_gateway, psrc=ip_victim, hwsrc=mac_host), verbose=False)
         # trick victim
         sc.send(sc.ARP(op=2, pdst=ip_victim, hwdst=mac_victim, psrc=ip_gateway, hwsrc=mac_host), verbose=False)
-
+    
+    @disable_if_offline
     def arp_restore_victim(self, ip_victim):
         """Restores ARP for a victim"""
         ip_to_mac = self.host_state.get_arp_table()
@@ -60,13 +57,14 @@ class ARP_spoofer:
             sc.send(sc.ARP(op=2, hwdst="ff:ff:ff:ff:ff:ff", pdst=ip_gateway, hwsrc=mac_victim, psrc=ip_victim), verbose=False)
             sc.send(sc.ARP(op=2, hwdst="ff:ff:ff:ff:ff:ff", pdst=ip_victim, hwsrc=mac_gateway, psrc=ip_gateway), verbose=False)
 
+    @disable_if_offline
     def arp_restore_all(self):
         """Restores ARP table by sending ARP packets with the real MAC addresses to end ARP spoofing"""
         for ip_victim in self.victim_ip_list:
             self.arp_restore_victim(ip_victim)
 
 
-
+    @disable_if_offline
     def arp_spoof_loop(self):
         """At each iteration obtains MAC addresses of targeted IPs and spoof their ARP tables"""
         while True:
@@ -84,7 +82,7 @@ class ARP_spoofer:
                     return
                 gateway_ip = self.host_state.gateway_ip
                 if self.gateway_mac is None:
-                    self.gateway_mac = self.get_mac(self.host_state.gateway_ip)
+                    self.gateway_mac = get_mac(self.host_state.gateway_ip)
             gateway_mac = self.gateway_mac
             self.host_state.set_arp_table(gateway_ip, gateway_mac)
 
@@ -96,7 +94,7 @@ class ARP_spoofer:
                     victim_mac = ip_to_mac[victim_ip]
                 else:
                     logging.debug("[ARP spoofer] obtaining MAC of %s", victim_ip)
-                    mac = self.get_mac(victim_ip)
+                    mac = get_mac(victim_ip)
                     if mac is not None:
                         self.host_state.set_arp_table(victim_ip, mac)
                         victim_mac = mac
