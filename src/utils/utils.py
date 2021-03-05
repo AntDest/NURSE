@@ -21,12 +21,12 @@ class StopProgramException(Exception):
 
 
 def disable_if_offline(f):
-    def wrapper(*args):
+    def wrapper(*args, **kwargs):
         if len(args) > 0 and hasattr(args[0], "host_state") and isinstance(args[0].host_state, HostState):
             # if we have a host_state
             if args[0].host_state.online:
                 # we are online, run the function:
-                return f(*args)
+                return f(*args, **kwargs)
             else:
                 # do not run the function as we are in offline mode
                 # logging.debug("Disabled function %s.%s in offline mode", args[0].__class__.__name__, f.__name__)

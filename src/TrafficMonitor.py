@@ -17,6 +17,8 @@ class TrafficMonitor:
         self.updater_thread = threading.Thread(target=self.updater)
         self.lock = threading.Lock()
         self.active = True
+        if not self.host_state.online:
+            update_delay = 1
         self.update_delay = update_delay
 
         self.device_names = {}      # MAC -> name
@@ -45,25 +47,37 @@ class TrafficMonitor:
         self.updater_thread.join()
 
 
-    # active discovery function, so disabled when offline
-    @disable_if_offline
-    def new_device(self, ip):
-        """Gathers info and adds the device to ARP table and device names"""
+    def new_device_get_mac(self, ip, mac=""):
         # obtain mac of IP
         if ip not in self.arp_table:
-            mac = get_mac(ip)
-            if mac is None:
-                return
+            if mac != "":
+                mac = get_mac(ip)
+                if mac is None:
+                    return
             self.arp_table[ip] = mac
         else:
             mac = self.arp_table[ip]
 
+
+    def new_device_get_name(self, mac):
         #obtain device name
         if mac not in self.device_names:
-            name = get_device_name(ip)
+            if self.host_state.online:
+                name = get_device_name(ip)
+            else:
+                name = "Unknown (offline mode)"
             manufacturer = get_vendor_from_mac(mac)
             self.device_names[mac] = (name, manufacturer)
     
+
+
+    # active discovery function, so disabled when offline
+    def new_device(self, ip, mac=""):
+        """Gathers info and adds the device to ARP table and device names"""        
+        self.new_device_get_mac(ip, mac)
+        self.new_device_get_name(mac)
+
+        
     
     def sleep(self, seconds):
         """Sleep for given seconds, but check if still active every second"""
@@ -157,6 +171,7 @@ class TrafficMonitor:
     def add_to_ARP_table(self, ip, mac):
         """adds an entry to the ARP table of the host state"""
         self.arp_table[ip] = mac
+        self.new_device_get_name(mac)
 
     def add_to_flow(self, flow_key:FlowKey, pkt_att:FlowPkt):
         """Adds an entry to flow based on information received from the packet parser"""

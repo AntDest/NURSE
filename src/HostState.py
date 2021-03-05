@@ -103,6 +103,9 @@ class HostState:
     def add_to_victim_list(self, ip):
         if ip not in self.victim_ip_list:
             self.victim_ip_list.append(ip)
+            # TODO: if offline: rescan the file with new victim list
+            if not self.online:
+                self.sniffer_thread.restart()
     
     def remove_from_victim_list(self, ip):
         if ip in self.victim_ip_list:

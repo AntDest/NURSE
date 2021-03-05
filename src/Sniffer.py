@@ -33,9 +33,13 @@ class Sniffer:
         with self.lock:
             self._active = False
 
-        if self.host_state.online:
-            logging.info("[Sniffer] Sniffer stopping")
-            self.sniffer.stop()
+        logging.info("[Sniffer] Sniffer stopping")
+        self.sniffer.stop()
+
+    def restart(self):
+        """Used to restart the sniffer, especially useful in offline mode to rescan pcap filewith new config"""
+        self.stop()
+        self.start()
 
     def _is_active(self):
         """return True if the thread has to stop"""
