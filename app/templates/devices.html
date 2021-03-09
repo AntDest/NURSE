@@ -29,6 +29,15 @@
     </ul>
 
     <script>
+    // reset all checkboxes to default state, prevent browser from caching
+    var allCheckboxes = document.querySelectorAll('input[type=checkbox]');
+    // loop on all checkboxes found (trick to iterate on nodeList)
+    [].forEach.call(allCheckboxes, function (checkbox) {
+        checkbox.checked = checkbox.defaultChecked;
+    });
+
+
+
         function updateDevice(ip, id) {
             var box = document.getElementById("checkbox_device_" + id)
             var enable = box.checked;
