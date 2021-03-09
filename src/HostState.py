@@ -47,6 +47,7 @@ class HostState:
         # dict dontaining device names: mac -> (device_name, manufacturer)
         self.device_names = {}
         self.last_update = time.time()
+        self.last_timestamp = 0     # last timestamp of uploaded data
 
 
     def set_capture_file(self, capture_file):
@@ -80,8 +81,8 @@ class HostState:
         self.traffic_monitor.stop()
         self.traffic_analyzer.stop()
         # print("Blocked domains: ", self.blocked_domains)
-        print("Queried domains: ", self.queried_domains)
-        print("Passive DNS: ", self.passive_DNS)
+        # print("Queried domains: ", self.queried_domains)
+        # print("Passive DNS: ", self.passive_DNS)
         if len(self.alert_manager.alert_list) > 0:
             print("Alerts: ")
             for a in self.alert_manager.alert_list:

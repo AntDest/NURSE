@@ -69,7 +69,7 @@ class TrafficAnalyzer():
         """counts packets with the exact same flags sent by a host to a remote IP in the time window"""
         # keys are FlowKey, values are SYN counts in the time window
         flag_counts = {} 
-        for flow in self.host_state.flows:
+        for flow in self.host_state.flows.copy():
             # read packets from end to beginning
             packets = reversed(self.host_state.flows[flow])
             for p in packets:
@@ -102,7 +102,7 @@ class TrafficAnalyzer():
             if key not in ports_contacted: 
                 ports_contacted[key] = set()
             ports_contacted[key].add(getattr(flow, "port_dst"))
-        print(ports_contacted)
+        # print(ports_contacted)
         for key in ports_contacted:
             if len(ports_contacted[key]) > MAX_PORTS_PER_HOST:
                 print(f"ALERT: port scanning on {key}: {len(ports_contacted[key])} port contacted ", ports_contacted[key])
@@ -112,6 +112,9 @@ class TrafficAnalyzer():
                 timestamp_end = self.stop_time
                 port_count = len(ports_contacted[key])
                 self.host_state.alert_manager.new_alert_portscan(host_IP, target_IP, timestamp_start, timestamp_end, port_count)
+
+    #TODO: horizontal port scan: detect same port on multiple IPs, but whitelist some?
+
 
     def detect_dos_on_port(self, syn_counts):
         """Detects if one IP:port combination has received too many SYN packets"""
@@ -147,12 +150,29 @@ class TrafficAnalyzer():
         import datetime
         while self.active:
             # TODO: if scanning PCAP, do not use time.time() !
-            stop_time = time.time()
-            start_time = stop_time - self.TIME_WINDOW
-            h1 = datetime.datetime.fromtimestamp(start_time).strftime('%H:%M:%S')
-            h2 = datetime.datetime.fromtimestamp(stop_time).strftime('%H:%M:%S')
-            logging.debug("[Analyzer] Analyzing data to detect alerts between %s and %s (window = %d)", h1, h2, self.TIME_WINDOW)
-            self.detect_alerts(start_time, stop_time)
+            if self.host_state.online:
+                stop_time = time.time()
+                start_time = stop_time - self.TIME_WINDOW
+                h1 = datetime.datetime.fromtimestamp(start_time).strftime('%H:%M:%S')
+                h2 = datetime.datetime.fromtimestamp(stop_time).strftime('%H:%M:%S')
+                logging.debug("[Analyzer] Analyzing data to detect alerts between %s and %s (window = %d)", h1, h2, self.TIME_WINDOW)
+                self.detect_alerts(start_time, stop_time)
+            else:
+                new_stop_time = self.host_state.last_timestamp
+                if new_stop_time > 0:
+                    if self.stop_time > 0:
+                        prev_stop_time = self.stop_time
+                    else:
+                        # first iteration, do only one time window, because no previous stop time is set
+                        prev_stop_time = new_stop_time - self.TIME_WINDOW
+                    if new_stop_time > prev_stop_time:
+                        print(prev_stop_time, new_stop_time)
+                    for start_time in range(prev_stop_time, new_stop_time, self.TIME_WINDOW):
+                        stop_time = start_time + self.TIME_WINDOW
+                        h1 = datetime.datetime.fromtimestamp(start_time).strftime('%H:%M:%S')
+                        h2 = datetime.datetime.fromtimestamp(stop_time).strftime('%H:%M:%S')
+                        # logging.debug("[Analyzer] Analyzing data to detect alerts between %s and %s (window = %d)", h1, h2, self.TIME_WINDOW)
+                        self.detect_alerts(start_time, stop_time)
             self.sleep(self.iteration_time)
 
     def safe_run_analyzer(self):

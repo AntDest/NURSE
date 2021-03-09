@@ -12,8 +12,6 @@ class PacketParser:
         self.traffic_monitor = traffic_monitor
         self._victim_list = self.host_state.victim_ip_list
         self.blacklist = self.host_state.blacklist_domains
-        if self.host_state.online:
-            self.socket = sc.conf.L2socket()
 
     def is_in_blacklist(self, domain):
         """
@@ -49,7 +47,7 @@ class PacketParser:
             # logging.debug("Forwarding packet to gateway")
             pkt[sc.Ether].src = self.host_state.host_mac.lower()
             pkt[sc.Ether].dst = arp_table[self.host_state.gateway_ip]
-            self.socket.send(pkt)
+            sc.sendp(pkt, verbose=False)
 
         elif dst_mac == self.host_state.host_mac and dst_ip in self._victim_list:
             # Gateway --> Local ==> Local --> Target
@@ -58,7 +56,7 @@ class PacketParser:
                 logging.error("[Packet Parser] Packet to victim going through host but not from gateway ?")
             pkt[sc.Ether].src = self.host_state.host_mac.lower()
             pkt[sc.Ether].dst = arp_table[dst_ip].lower()
-            self.socket.send(pkt)
+            sc.sendp(pkt, verbose=False)
 
         else:
             # not a packet to forward
@@ -249,7 +247,7 @@ class PacketParser:
                 self.check_IP_layer(pkt)
                 if pkt[sc.IP].dst in self._victim_list or pkt[sc.IP].src in self._victim_list or pkt[sc.IP].dst == "255.255.255.255":
                     # packet from or to IPs that are not victims
-                    if sc.DNS in pkt:
+                    if (sc.UDP in pkt or sc.TCP in pkt) and sc.DNS in pkt:
                         self.parse_DNS(pkt)
                         # do not forward packet here, since it may be spoofed
                     elif sc.DHCP in pkt:
