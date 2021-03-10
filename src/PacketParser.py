@@ -250,6 +250,10 @@ class PacketParser:
                     if (sc.UDP in pkt or sc.TCP in pkt) and sc.DNS in pkt:
                         self.parse_DNS(pkt)
                         # do not forward packet here, since it may be spoofed
+                    elif (sc.UDP in pkt) and pkt[sc.UDP].dport == 5353:
+                        # could be mDNS:
+                        pkt = pkt[sc.UDP].decode_payload_as(sc.DNS)
+                        self.parse_DNS(pkt)
                     elif sc.DHCP in pkt:
                         self.parse_DHCP(pkt)
                     elif sc.TCP in pkt:
@@ -262,6 +266,10 @@ class PacketParser:
                         # checking for blacklist should not be necessary since DNS is spoofed
                         # forward packet since the packet destination MAC is spoofed
                         self.forward_packet(pkt)
+                else:
+                    # not a victim, but could be a new device?
+                    if ip_address(pkt[sc.IP].src).is_private:
+                        self.traffic_monitor.new_device(pkt[sc.IP].src)
             else:
                 # non IP packets
                 # we parse ARP packets to try to get more information about the devices in the network

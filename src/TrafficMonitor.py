@@ -54,11 +54,11 @@ class TrafficMonitor:
             if mac != "":
                 mac = get_mac(ip)
                 if mac is None:
-                    return
+                    return ""
             self.arp_table[ip] = mac
         else:
             mac = self.arp_table[ip]
-
+        return mac
 
     def new_device_get_name(self, ip, mac):
         #obtain device name
@@ -73,8 +73,8 @@ class TrafficMonitor:
 
     # active discovery function, so disabled when offline
     def new_device(self, ip, mac=""):
-        """Gathers info and adds the device to ARP table and device names"""        
-        self.new_device_get_mac(ip, mac)
+        """Gathers info and adds the device to ARP table and device names"""
+        mac = self.new_device_get_mac(ip, mac)
         self.new_device_get_name(ip, mac)
         self.new_data = True
 
