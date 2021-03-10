@@ -50,6 +50,18 @@ class HostState:
         self.last_timestamp = 0     # last timestamp of uploaded data
 
 
+    def reset(self):
+        """resets some values, used when restarting parsing"""
+        self.passive_DNS = {}
+        self.queried_domains = {}
+        self.blocked_domains = set()
+        self.flows = {}
+        self.domain_scores = {}
+        self.device_names = {}
+        self.last_update = time.time()
+        self.last_timestamp = 0     # last timestamp of uploaded data
+
+
     def set_capture_file(self, capture_file):
         if not self.online and capture_file != "":
             self.capture_file = capture_file
@@ -64,9 +76,9 @@ class HostState:
             self.host_mac = sc.get_if_hwaddr(self.interface)
         self.ARP_spoof_thread.victim_ip_list = self.victim_ip_list
         self.ARP_spoof_thread.start()
+        self.server_thread.start()
         self.traffic_monitor.start()
         self.sniffer_thread.start()
-        self.server_thread.start()
         self.traffic_analyzer.start()
 
         if self.online:
@@ -80,6 +92,7 @@ class HostState:
         self.sniffer_thread.stop()
         self.traffic_monitor.stop()
         self.traffic_analyzer.stop()
+        print("ARP table: ", self.arp_table)
         # print("Blocked domains: ", self.blocked_domains)
         # print("Queried domains: ", self.queried_domains)
         # print("Passive DNS: ", self.passive_DNS)

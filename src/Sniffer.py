@@ -38,8 +38,10 @@ class Sniffer:
 
     def restart(self):
         """Used to restart the sniffer, especially useful in offline mode to rescan pcap filewith new config"""
-        self.stop()
-        self.start()
+        if self._active:
+            self.stop()
+            self.host_state.reset()
+            self.start()
 
     def _is_active(self):
         """return True if the thread has to stop"""

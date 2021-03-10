@@ -82,7 +82,8 @@ def device_list():
     hs = get_host_state()
     data = {
         "last_update": hs.last_update,
-        "device_list": hs.get_device_list()
+        "device_list": hs.get_device_list(),
+        "offline": not hs.online
     }
     return render_template("devices.html", data=data)
 

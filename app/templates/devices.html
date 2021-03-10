@@ -13,7 +13,7 @@
     <table id="device_table" style="width:100%">
         <tr>
           <th>IP</th>
-          <th>Device name</th>
+          <th>Device name {% if data.offline %}  (only in online mode)  {% endif %}</th>
           <th>Manufacturer</th>
           <th>Scanning</th>
         </tr>

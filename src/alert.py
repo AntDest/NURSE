@@ -41,7 +41,7 @@ class AlertNXDOMAIN(Alert):
         message = f"{host_IP} contacted {nx_count} non-existent domains between {d_start.strftime('%H:%M:%S')} and {d_end.strftime('%H:%M:%S')}"
         super().__init__(severity, message)
 
-class AlertPortScanning(Alert):
+class AlertVertPortScanning(Alert):
     name = "Port scanning alert"
     def __init__(self, host_IP, target_IP, timestamp_start, timestamp_end, port_count):
         severity = 2
@@ -52,6 +52,19 @@ class AlertPortScanning(Alert):
         d_end = datetime.datetime.fromtimestamp(timestamp_end)
         message = f"{host_IP} contacted {port_count} different ports of {target_IP} between {d_start.strftime('%H:%M:%S')} and {d_end.strftime('%H:%M:%S')}"
         super().__init__(severity, message)
+
+class AlertHorizPortScanning(Alert):
+    name = "Port scanning alert"
+    def __init__(self, host_IP, target_port, timestamp_start, timestamp_end, ip_count):
+        severity = 2
+        self.host_IP = host_IP
+        self.target_IP = target_IP
+        self.timestamp = timestamp_start
+        d_start = datetime.datetime.fromtimestamp(timestamp_start)
+        d_end = datetime.datetime.fromtimestamp(timestamp_end)
+        message = f"{host_IP} contacted {ip_count} different hosts on port {target_port} between {d_start.strftime('%H:%M:%S')} and {d_end.strftime('%H:%M:%S')}"
+        super().__init__(severity, message)
+
 
 
 class AlertDoS(Alert):
@@ -65,3 +78,23 @@ class AlertDoS(Alert):
         d_end = datetime.datetime.fromtimestamp(timestamp_end)
         message = f"{host_IP} initiated {connection_count} connections with {target_IP} between {d_start.strftime('%H:%M:%S')} and {d_end.strftime('%H:%M:%S')}"
         super().__init__(severity, message)
+
+class AlertDomains(Alert):
+    def __init__(self, host_IP, timestamp_start, timestamp_end, domain_count, threshold):
+        severity = 2
+        self.host_IP = host_IP
+        self.timestamp = timestamp_start
+        d_start = datetime.datetime.fromtimestamp(timestamp_start)
+        d_end = datetime.datetime.fromtimestamp(timestamp_end)
+        message = f"{host_IP} contacted {domain_count} domains with score higher than {threshold} between {d_start.strftime('%H:%M:%S')} and {d_end.strftime('%H:%M:%S')}"
+        super().__init__(severity, message)
+
+class AlertNoDNS(Alert):
+    def __init__(self, host_IP, ip_dst, timestamp):
+        severity = 2
+        self.host_IP = host_IP
+        self.timestamp = timestamp
+        date = datetime.datetime.fromtimestamp(timestamp)
+        message = f"{host_IP} contacted {ip_dst} with no DNS query before at {date.strftime('%H:%M:%S')}"
+        super().__init__(severity, message)
+

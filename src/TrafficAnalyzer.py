@@ -2,7 +2,7 @@ import threading
 import logging
 import time
 from src.utils.utils import restart_on_error
-from config import TIME_WINDOW, MAX_CONNECTIONS_PER_PORT, MAX_NXDOMAIN, MAX_PORTS_PER_HOST, DATABASE_UPDATE_DELAY
+from config import TIME_WINDOW, MAX_CONNECTIONS_PER_PORT, MAX_NXDOMAIN, MAX_PORTS_PER_HOST, MAX_IP_PER_PORT, WHITELIST_PORTS, DATABASE_UPDATE_DELAY, DOMAIN_SCORE_THRESHOLD, MAX_DOMAIN_COUNT
 
 class TrafficAnalyzer():
     """Parses the data obtained from Traffic Monitor and sent to HostState, detects anomalous behavior over time"""
@@ -65,10 +65,11 @@ class TrafficAnalyzer():
             nxdomains_counts_per_IP[ip] = nxdomain_count
         return nxdomains_counts_per_IP
 
-    def count_TCP_flag_packets(self, flag):
+    def analyze_flows(self, flag):
         """counts packets with the exact same flags sent by a host to a remote IP in the time window"""
         # keys are FlowKey, values are SYN counts in the time window
         flag_counts = {} 
+        contacted_IPs = {}
         for flow in self.host_state.flows.copy():
             # read packets from end to beginning
             packets = reversed(self.host_state.flows[flow])
@@ -79,7 +80,14 @@ class TrafficAnalyzer():
                     break
                 if p.flags == flag:
                     flag_counts[flow] = flag_counts.get(flow, 0) + 1
-        return flag_counts
+                    ip_src = getattr(flow,"IP_src")
+                    ip_dst = getattr(flow,"IP_dst")
+                    contacted_IPs.setdefault(ip_src, set()).add(ip_dst)
+        return flag_counts, contacted_IPs
+
+    def get_scores_of_contacted_domains(self):
+        # self.host_state.alert_manager.new_alert_domains(ip, self.start_time, self.stop_time, bad_score_count, DOMAIN_SCORE_THRESHOLD)
+        pass
 
 
     def detect_nxdomain_alert(self, nxdomain_counts):
@@ -111,10 +119,24 @@ class TrafficAnalyzer():
                 timestamp_start = self.start_time
                 timestamp_end = self.stop_time
                 port_count = len(ports_contacted[key])
-                self.host_state.alert_manager.new_alert_portscan(host_IP, target_IP, timestamp_start, timestamp_end, port_count)
+                self.host_state.alert_manager.new_alert_vertical_portscan(host_IP, target_IP, timestamp_start, timestamp_end, port_count)
 
     #TODO: horizontal port scan: detect same port on multiple IPs, but whitelist some?
-
+    def detect_horizontal_port_scan(self, syn_counts):
+        ip_contacted = {}
+        for flow in syn_counts:
+            key = (getattr(flow,"IP_src"), getattr(flow,"port_dst"))
+            if key not in ip_contacted: 
+                ip_contacted[key] = set()
+            ip_contacted[key].add(getattr(flow, "IP_dst"))
+        for key in ip_contacted:
+            if key[1] not in WHITELIST_PORTS and len(ip_contacted[key]) > MAX_IP_PER_PORT:
+                host_IP = key[0]
+                port_dst = key[1]
+                timestamp_start = self.start_time
+                timestamp_end = self.stop_time
+                ip_count = len(ip_contacted[key])
+                self.host_state.alert_manager.new_alert_horizontal_portscan(host_IP, target_IP, timestamp_start, timestamp_end, port_count)
 
     def detect_dos_on_port(self, syn_counts):
         """Detects if one IP:port combination has received too many SYN packets"""
@@ -134,21 +156,38 @@ class TrafficAnalyzer():
                 self.host_state.alert_manager.new_alert_dos(host_IP, target_IP, timestamp_start, timestamp_end, conn_count)
 
 
+    def detect_contacted_ip_without_dns(self, contacted_ips):
+        pDNS = self.host_state.passive_DNS.copy()
+        contacted_with_no_DNS = []
+        for ip_src in contacted_ips:
+            for ip_dst in contacted_ips[ip_src]:
+                found = False
+                for domain in pDNS:
+                    if ip_dst in pDNS[domain]:
+                        found = True 
+                        break
+                if not found:
+                    contacted_with_no_DNS.append((ip_src,ip_dst))
+                    self.host_state.alert_manager.new_alert_no_dns(ip_src, ip_dst, self.start_time)
+
 
     def detect_alerts(self, start_time, stop_time):
         self.start_time = start_time
         self.stop_time = stop_time
         nxdomain_counts = self.count_NXDOMAIN_per_IP()
-        syn_counts = self.count_TCP_flag_packets("S")
-        
+        syn_counts, contacted_ips = self.analyze_flows("S")
+        domains_scores = self.get_scores_of_contacted_domains()
+
         # analyze data and raise alerts if something is suspicious
         self.detect_nxdomain_alert(nxdomain_counts)
         self.detect_vertical_port_scan(syn_counts)
         self.detect_dos_on_port(syn_counts)
+        self.detect_contacted_ip_without_dns(contacted_ips)
 
     def analyzer(self):
         import datetime
         while self.active:
+            logging.debug("[Analyzer] New iteration")
             # TODO: if scanning PCAP, do not use time.time() !
             if self.host_state.online:
                 stop_time = time.time()
@@ -165,13 +204,11 @@ class TrafficAnalyzer():
                     else:
                         # first iteration, do only one time window, because no previous stop time is set
                         prev_stop_time = new_stop_time - self.TIME_WINDOW
-                    if new_stop_time > prev_stop_time:
-                        print(prev_stop_time, new_stop_time)
                     for start_time in range(prev_stop_time, new_stop_time, self.TIME_WINDOW):
                         stop_time = start_time + self.TIME_WINDOW
-                        h1 = datetime.datetime.fromtimestamp(start_time).strftime('%H:%M:%S')
-                        h2 = datetime.datetime.fromtimestamp(stop_time).strftime('%H:%M:%S')
-                        # logging.debug("[Analyzer] Analyzing data to detect alerts between %s and %s (window = %d)", h1, h2, self.TIME_WINDOW)
+                        h1 = datetime.datetime.fromtimestamp(start_time).strftime('"%m/%d/%Y, %H:%M:%S')
+                        h2 = datetime.datetime.fromtimestamp(stop_time).strftime('"%m/%d/%Y, %H:%M:%S')
+                        logging.debug("[Analyzer] Analyzing data to detect alerts between %s and %s (window = %d)", h1, h2, self.TIME_WINDOW)
                         self.detect_alerts(start_time, stop_time)
             self.sleep(self.iteration_time)
 

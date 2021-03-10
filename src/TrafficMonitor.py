@@ -66,7 +66,7 @@ class TrafficMonitor:
             if self.host_state.online:
                 name = get_device_name(ip)
             else:
-                name = "Unknown (offline mode)"
+                name = "-"
             manufacturer = get_vendor_from_mac(mac)
             self.device_names[mac] = (name, manufacturer)
 
@@ -94,8 +94,7 @@ class TrafficMonitor:
                 for ip in self.arp_table.copy():
                     self.new_device(ip)
                     
-                logging.info("[Monitor] Updating data to host thread")
-                print(self.host_state.victim_ip_list)
+                logging.debug("[Monitor] Updating data to host thread")
                 with self.host_state.lock:
                     # update passive DNS: for each domain add the new IPs (the IP list is a set)
                     for domain in self.passive_DNS:

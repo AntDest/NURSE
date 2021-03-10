@@ -1,4 +1,4 @@
-from src.alert import AlertIPSpoofed, AlertNXDOMAIN, AlertPortScanning, AlertDoS
+from src.alert import AlertIPSpoofed, AlertNXDOMAIN, AlertVertPortScanning, AlertHorizPortScanning, AlertDoS, AlertNoDNS
 
 
 class AlertManager():
@@ -15,10 +15,23 @@ class AlertManager():
         a = AlertNXDOMAIN(host_IP, timestamp_start, timestamp_end, nx_count)
         self.alert_list.append(a)
 
-    def new_alert_portscan(self, host_IP, target_IP, timestamp_start, timestamp_end, port_count):
-        a = AlertPortScanning(host_IP, target_IP, timestamp_start, timestamp_end, port_count)
+    def new_alert_vertical_portscan(self, host_IP, target_IP, timestamp_start, timestamp_end, port_count):
+        a = AlertVertPortScanning(host_IP, target_IP, timestamp_start, timestamp_end, port_count)
+        self.alert_list.append(a)
+
+    def new_alert_horizontal_portscan(self, host_IP, target_port, timestamp_start, timestamp_end, ip_count):
+        a = AlertHorizPortScanning(host_IP, target_port, timestamp_start, timestamp_end, ip_count)
         self.alert_list.append(a)
     
     def new_alert_dos(self, host_IP, target_IP, timestamp_start, timestamp_end, connection_count):
         a = AlertDoS(host_IP, target_IP, timestamp_start, timestamp_end, connection_count)
         self.alert_list.append(a)
+
+    def new_alert_domains(self, host_IP, timestamp_start, timestamp_end, domain_count, threshold):
+        a = AlertDomains(host_IP, timestamp_start, timestamp_end, domain_count, threshold)
+        self.alert_list.append(a)
+
+    def new_alert_no_dns(self, host_IP, ip_dst, timestamp):
+        a = AlertNoDNS(host_IP, ip_dst, timestamp)
+        self.alert_list.append(a)
+
