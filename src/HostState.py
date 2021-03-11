@@ -60,7 +60,7 @@ class HostState:
         self.device_names = {}
         self.last_update = time.time()
         self.last_timestamp = 0     # last timestamp of uploaded data
-
+        self.alert_manager.alert_list = []
 
     def set_capture_file(self, capture_file):
         if not self.online and capture_file != "":
@@ -93,6 +93,7 @@ class HostState:
         self.traffic_monitor.stop()
         self.traffic_analyzer.stop()
         print("ARP table: ", self.arp_table)
+        print("Device names: ", self.device_names)
         # print("Blocked domains: ", self.blocked_domains)
         # print("Queried domains: ", self.queried_domains)
         # print("Passive DNS: ", self.passive_DNS)

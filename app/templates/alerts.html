@@ -1,0 +1,29 @@
+{% extends "layout.html" %}
+
+{% block title %}Device list{% endblock %}
+{% block header %}
+<h1>Alerts</h1>
+
+<p>Alerts of suspicious traffic</p>
+
+<p>Last update {{data.last_update | timestamp_to_date}}</p>
+{% endblock %}
+
+{% block content %}
+    <table id="device_table" style="width:100%">
+        <tr>
+          <th>Time</th>
+          <th>Alert type</th>
+          <th>Message</th>
+        </tr>
+        {% for d in data.alerts %}
+        <tr>
+            <td>{{ d.timestamp }}</td>
+            <td>{{ d.name }}</td>
+            <td>{{ d.message }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    </ul>
+
+{% endblock %}

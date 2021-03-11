@@ -80,6 +80,7 @@ class AlertDoS(Alert):
         super().__init__(severity, message)
 
 class AlertDomains(Alert):
+    name = "Suspicious domains alert"
     def __init__(self, host_IP, timestamp_start, timestamp_end, domain_count, threshold):
         severity = 2
         self.host_IP = host_IP
@@ -90,6 +91,7 @@ class AlertDomains(Alert):
         super().__init__(severity, message)
 
 class AlertNoDNS(Alert):
+    name = "Hardcoded IP"
     def __init__(self, host_IP, ip_dst, timestamp):
         severity = 2
         self.host_IP = host_IP

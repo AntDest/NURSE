@@ -5,7 +5,6 @@ from flask import request
 from app import app
 from src.utils.utils import is_IPv4
 
-
 WEBAPP_CONTEXT = {
     "host_state": None
 }
@@ -34,7 +33,6 @@ def domain_list():
         domain_scores = hs.domain_scores.copy()
         queried_domains = hs.queried_domains.copy()
         last_update = hs.last_update
-        flows = hs.flows.copy()
     
     domain_table = []
     list_devices = []
@@ -53,26 +51,10 @@ def domain_list():
                 "score": domain_scores[domain]
             }
             domain_table.append(d)
-    
-    # scores_table = [{"domain":k, "score":v} for k,v in domain_scores.items()]
-
-    flows_list = []
-    for key in flows:
-        key_dict = {}
-        k = key._asdict()
-        for key_name in k:
-            key_dict[key_name] = getattr(key, key_name)
-        for pkt in flows[key]:
-            line_dict = key_dict.copy()
-            for key_name in pkt._asdict():
-                line_dict[key_name] = getattr(pkt, key_name)
-            flows_list.append(line_dict)
-
     data = {
         "list_devices": list_devices,
         "domain_table": domain_table,
         "last_update": last_update,
-        "flows": flows_list
     }
 
     return render_template("scores.html", data=data)
@@ -106,3 +88,19 @@ def update_device():
         return "True"
     else:
         return "False"
+
+@app.route("/alerts")
+def alerts():
+    data = {}
+    hs = get_host_state()
+    with hs.lock:
+        alert_list = hs.alert_manager.alert_list.copy()
+        data["last_update"] = hs.last_update
+    data["alerts"] = []
+    for a in alert_list:
+        d = {}
+        d["name"] = a.name
+        d["message"] = a.message
+        d["timestamp"] = a.timestamp
+        data["alerts"].append(d)
+    return render_template("alerts.html", data=data)
