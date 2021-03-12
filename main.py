@@ -16,7 +16,7 @@ import config
 from src.utils.utils import StopProgramException
 
 logging_format = "%(asctime)s: %(message)s"
-logging.basicConfig(stream=sys.stdout, format=logging_format, level=logging.INFO, datefmt="%H:%M:%S")
+logging.basicConfig(stream=sys.stdout, format=logging_format, level=logging.DEBUG, datefmt="%H:%M:%S")
 logging.getLogger("requests").setLevel(logging.WARNING)
 logging.getLogger("urllib3").setLevel(logging.WARNING)
 
@@ -58,10 +58,10 @@ if __name__ == "__main__":
     parser.add_argument('--offline', metavar='path', type=str, default="", help='the path to the pcap file')
     args = parser.parse_args()
     if args.offline != "":
-        online = False #online at true enables packet sending, packet forwarding
+        arg_online = False #online at true enables packet sending, packet forwarding
         capture_path = args.offline    
         # logging.getLogger().setLevel(logging.WARNING)
     else:
-        online = True
+        arg_online = True
         capture_path = ""
-    main(online, capture_file=capture_path)
+    main(arg_online, capture_file=capture_path)
