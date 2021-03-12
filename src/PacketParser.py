@@ -12,6 +12,7 @@ class PacketParser:
         self.traffic_monitor = traffic_monitor
         self._victim_list = self.host_state.victim_ip_list
         self.blacklist = self.host_state.blacklist_domains
+        self.count = 0
 
     def is_in_blacklist(self, domain):
         """
@@ -108,7 +109,7 @@ class PacketParser:
             if pkt[sc.DNS].qdcount > 0 and pkt[sc.DNS].ancount > 0 and pkt.haslayer(sc.DNSRR):
                 # parse DNS response
                 fqdn, ip_list = self.parse_DNS_response(pkt)
-                logging.debug("[Packet Parser] Domain %s, ip list %s", fqdn, ip_list)
+                # logging.debug("[Packet Parser] Domain %s, ip list %s", fqdn, ip_list)
                 # add to pDNS data
                 self.traffic_monitor.add_to_pDNS(fqdn, ip_list)
                 # add to queried domains:, querier is the destination since packet is a response
@@ -250,16 +251,16 @@ class PacketParser:
                     if (sc.UDP in pkt or sc.TCP in pkt) and sc.DNS in pkt:
                         self.parse_DNS(pkt)
                         # do not forward packet here, since it may be spoofed
-                    elif (sc.UDP in pkt) and pkt[sc.UDP].dport == 5353:
+                    if (sc.UDP in pkt) and pkt[sc.UDP].dport == 5353:
                         # could be mDNS:
                         pkt = pkt[sc.UDP].decode_payload_as(sc.DNS)
                         self.parse_DNS(pkt)
-                    elif sc.DHCP in pkt:
+                    if sc.DHCP in pkt:
                         self.parse_DHCP(pkt)
-                    elif sc.TCP in pkt:
+                    if sc.TCP in pkt:
                         self.parse_TCP_UDP(pkt, protocol="TCP")
                         self.forward_packet(pkt)
-                    elif sc.UDP in pkt:
+                    if sc.UDP in pkt:
                         self.parse_TCP_UDP(pkt, protocol="UDP")
                         self.forward_packet(pkt)
                     else: # has no known layer
@@ -282,4 +283,7 @@ class PacketParser:
 
     def prn_call(self, pkt):
         """This is the function that is called by the prn callback in Sniffer"""
+        self.count += 1
+        if self.count % 500 == 0:
+            print(self.count,  " packets")
         safe_run(self.parse_packet, args=[pkt])

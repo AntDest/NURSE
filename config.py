@@ -8,8 +8,9 @@ BLACKLIST_DOMAINS = [
     "grenoble.fr" 
 ]
 
-DATABASE_UPDATE_DELAY = 20
-
+DATABASE_UPDATE_DELAY = 5
+# Stop after 5 iterations with no more packets
+STOP_AFTER_WITH_NO_INFO = 5*DATABASE_UPDATE_DELAY 
 # If QUIT_AFTER > 0, the program will stop after the given number of seconds
 QUIT_AFTER = 0
 # list of services that can be used to obtain your IP

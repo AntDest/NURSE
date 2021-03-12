@@ -18,7 +18,7 @@ class TrafficMonitor:
         self.lock = threading.Lock()
         self.active = True
         if not self.host_state.online:
-            update_delay = 1
+            update_delay = 3
         self.update_delay = update_delay
 
         self.device_names = {}      # MAC -> name
@@ -32,12 +32,17 @@ class TrafficMonitor:
         self.classifier = None
         self.last_timestamp = 0
         self.new_data = False #turns to true, if new data comes
+        if not self.host_state.online:
+            logging.info("[TrafficMonitor] Initialising classifier")
+            self.classifier = DomainClassifier()
 
     def start(self):
+        if self.classifier is None:
+            logging.info("[TrafficMonitor] Initialising classifier")
+            self.classifier = DomainClassifier()
         with self.lock:
             self.active = True
-        logging.info("[TrafficMonitor] Initialising classifier")
-        self.classifier = DomainClassifier()
+        
         logging.info("[Monitor] Traffic monitor starting")
         self.updater_thread.start()
 
@@ -75,12 +80,12 @@ class TrafficMonitor:
     # active discovery function, so disabled when offline
     def new_device(self, ip, mac=""):
         """Gathers info and adds the device to ARP table and device names"""
-        if ip == "0.0.0.0": 
-            return
-        else:                
+        if ip != "0.0.0.0": 
             mac = self.new_device_get_mac(ip, mac)
             self.new_device_get_name(ip, mac)
             self.new_data = True
+            if not self.host_state.online:
+                self.host_state.add_to_victim_list(ip)
 
         
     
@@ -187,9 +192,10 @@ class TrafficMonitor:
 
     def add_to_ARP_table(self, ip, mac):
         """adds an entry to the ARP table of the host state"""
-        self.arp_table[ip] = mac
-        self.new_device_get_name(ip, mac)
-        self.new_data = True
+        if ip != "0.0.0.0":
+            self.arp_table[ip] = mac
+            self.new_device_get_name(ip, mac)
+            self.new_data = True
 
     def add_to_flow(self, flow_key:FlowKey, pkt_att:FlowPkt):
         """Adds an entry to flow based on information received from the packet parser"""

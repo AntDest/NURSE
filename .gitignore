@@ -10,3 +10,5 @@ dist
 build
 main.spec
 main_onefile.spec
+
+captures/

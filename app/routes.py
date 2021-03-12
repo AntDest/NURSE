@@ -11,7 +11,10 @@ WEBAPP_CONTEXT = {
 
 def start_app_thread(host_state):
     WEBAPP_CONTEXT["host_state"] = host_state
-    app.run()
+    try:
+        app.run()
+    except OSError:
+        pass
 
 def get_host_state():
     if WEBAPP_CONTEXT["host_state"]:
@@ -38,17 +41,17 @@ def domain_list():
     list_devices = []
     for ip in queried_domains:
         mac = hs.arp_table[ip]
-        if mac in hs.device_names:
-            device_name = hs.device_names[mac][0]
-        else:
+        device_name = hs.device_names.get(mac, ("",""))[0]
+        if device_name != "":
             device_name = ip
         list_devices.append(device_name)
         for timestamp, domain in queried_domains[ip]:
+            score =  domain_scores.get(domain,0)
             d = {
                 "timestamp": timestamp,
                 "device": device_name,
                 "domain": domain,
-                "score": domain_scores[domain]
+                "score": score
             }
             domain_table.append(d)
     data = {

@@ -45,24 +45,27 @@ class TrafficAnalyzer():
         pDNS = self.host_state.passive_DNS.copy()
         queried_domains = self.host_state.queried_domains.copy()
         nxdomains_counts_per_IP = {}
-        for ip in queried_domains:
-            nxdomain_count = 0
-            # read from the end, and break when timestamp is too old
-            for query in reversed(queried_domains[ip]):
-                ts = query[0]
-                if ts > self.stop_time:
-                    continue
-                elif ts < self.start_time:
-                    break
+        # for ip in queried_domains:
+        #     nxdomain_count = 0
+        #     # read from the end, and break when timestamp is too old
+        #     for query in reversed(queried_domains[ip]):
+        #         ts = query[0]
+        #         if ts > self.stop_time:
+        #             continue
+        #         elif ts < self.start_time:
+        #             break
 
-                domain = query[1]
-                if domain not in pDNS:
-                    # should not happen, but could with some bugs due to not deep enough copies
-                    logging.error("[Analyzer] %s is in queried domains but not in pDNS")
-                    return
-                if len(pDNS[domain]) == 0:
-                    nxdomain_count += 1
-            nxdomains_counts_per_IP[ip] = nxdomain_count
+        #         domain = query[1]
+        #         if domain not in pDNS:
+        #             # should not happen, but could with some bugs due to not deep enough copies
+        #             logging.error("[Analyzer] %s is in queried domains but not in pDNS")
+        #             return
+        #         if len(pDNS[domain]) == 0:
+        #             nxdomain_count += 1
+        #     nxdomains_counts_per_IP[ip] = nxdomain_count
+
+
+        # TODO: THIS IS NOT NXDOMAIN BUT UNKNOWN IPS
         return nxdomains_counts_per_IP
 
     def analyze_flows(self, flag):

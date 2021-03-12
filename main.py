@@ -43,7 +43,10 @@ def main(online, capture_file):
             time.sleep(config.QUIT_AFTER)
         else:
             while True:
-                continue
+                if not online and time.time() - h.last_update > config.STOP_AFTER_WITH_NO_INFO:
+                    print("[Main] ===== Stopping because no data has been received since {}s".format(config.STOP_AFTER_WITH_NO_INFO))
+                    raise StopProgramException
+                
     except (KeyboardInterrupt, StopProgramException):
         print("") # breakline after ^C to help reading
         logging.info("[Main] Keyboard Interrupt, ending")

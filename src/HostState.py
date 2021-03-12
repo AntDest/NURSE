@@ -7,9 +7,10 @@ from config import CHECK_IP_URL_LIST
 
 class HostState:
     """Host state that starts all threads and stores the global information"""
-    def __init__(self, online):
+    def __init__(self, online, enable_testing=False):
         self.lock = threading.Lock()
         self.online = online
+        self.testing = enable_testing 
 
         # list of network parameters that will be useful for child threads
         self.host_ip = None
@@ -61,6 +62,7 @@ class HostState:
         self.last_update = time.time()
         self.last_timestamp = 0     # last timestamp of uploaded data
         self.alert_manager.alert_list = []
+        self.packet_parser.count = 0
 
     def set_capture_file(self, capture_file):
         if not self.online and capture_file != "":
@@ -76,6 +78,7 @@ class HostState:
             self.host_mac = sc.get_if_hwaddr(self.interface)
         self.ARP_spoof_thread.victim_ip_list = self.victim_ip_list
         self.ARP_spoof_thread.start()
+        # run server first to have the app ready
         self.server_thread.start()
         self.traffic_monitor.start()
         self.sniffer_thread.start()
