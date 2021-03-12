@@ -35,3 +35,14 @@ class AlertManager():
         a = AlertNoDNS(host_IP, ip_dst, timestamp)
         self.alert_list.append(a)
 
+    def get_list_as_dict(self):
+        dict_list = []
+        for a in self.alert_list:
+            alert_dict = {}
+            alert_dict["name"] = a.name
+            alert_dict["host"] = a.host_IP
+            alert_dict["message"] = a.message
+            alert_dict["timestamp"] = a.timestamp
+            dict_list.append(alert_dict)
+        return dict_list
+        

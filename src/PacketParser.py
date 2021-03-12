@@ -285,6 +285,6 @@ class PacketParser:
     def prn_call(self, pkt):
         """This is the function that is called by the prn callback in Sniffer"""
         self.count += 1
-        if self.count % 5000 == 0:
+        if self.count % 1000 == 0:
             logging.info("[PacketParser] %d packets", self.count)
         safe_run(self.parse_packet, args=[pkt])

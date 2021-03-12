@@ -1,16 +1,17 @@
 import threading
 import logging
 import scapy.all as sc
-
+from config import QUIT_AFTER_PACKETS
 class Sniffer:
     def __init__(self, host_state, packet_parser):
         self.host_state = host_state
         self.lock = threading.Lock()
         self._active = False
         self.filter = lambda p: (p.haslayer(sc.IP) or p.haslayer(sc.ARP)) 
-        if self.host_state.online:
+        if self.host_state.online:    
             self.sniffer = sc.AsyncSniffer(
                 prn=packet_parser.prn_call,
+                count=QUIT_AFTER_PACKETS
             )
         else:
             if self.host_state.capture_file:
@@ -18,6 +19,7 @@ class Sniffer:
                     offline=self.host_state.capture_file,
                     prn=packet_parser.prn_call,
                     lfilter=self.filter,
+                    count=QUIT_AFTER_PACKETS
                 )
             else:
                 raise Exception("Error: No capture file provided for offline mode")
