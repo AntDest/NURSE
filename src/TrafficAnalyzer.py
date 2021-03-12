@@ -136,7 +136,7 @@ class TrafficAnalyzer():
                 timestamp_start = self.start_time
                 timestamp_end = self.stop_time
                 ip_count = len(ip_contacted[key])
-                self.host_state.alert_manager.new_alert_horizontal_portscan(host_IP, target_IP, timestamp_start, timestamp_end, port_count)
+                self.host_state.alert_manager.new_alert_horizontal_portscan(host_IP, port_dst, timestamp_start, timestamp_end, ip_count)
 
     def detect_dos_on_port(self, syn_counts):
         """Detects if one IP:port combination has received too many SYN packets"""

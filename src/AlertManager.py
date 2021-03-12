@@ -1,4 +1,4 @@
-from src.alert import AlertIPSpoofed, AlertNXDOMAIN, AlertVertPortScanning, AlertHorizPortScanning, AlertDoS, AlertNoDNS
+from src.alert import AlertIPSpoofed, AlertNXDOMAIN, AlertVertPortScanning, AlertHorizPortScanning, AlertDoS, AlertNoDNS, AlertDomains
 
 
 class AlertManager():
