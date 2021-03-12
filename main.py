@@ -54,6 +54,8 @@ def main(online, capture_file):
         print(traceback.format_exc())
         print(e)
     finally:
+        print("[Main] ---------------------- Ending ----------------------")
+        logging.info("[Main] %d packets captures", h.packet_parser.count)
         h.stop()
 
 if __name__ == "__main__":

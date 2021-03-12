@@ -211,7 +211,7 @@ class TrafficAnalyzer():
                         stop_time = start_time + self.TIME_WINDOW
                         h1 = datetime.datetime.fromtimestamp(start_time).strftime('"%m/%d/%Y, %H:%M:%S')
                         h2 = datetime.datetime.fromtimestamp(stop_time).strftime('"%m/%d/%Y, %H:%M:%S')
-                        logging.debug("[Analyzer] Analyzing data to detect alerts between %s and %s (window = %d)", h1, h2, self.TIME_WINDOW)
+                        # logging.debug("[Analyzer] Analyzing data to detect alerts between %s and %s (window = %d)", h1, h2, self.TIME_WINDOW)
                         self.detect_alerts(start_time, stop_time)
             self.sleep(self.iteration_time)
 

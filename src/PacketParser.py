@@ -24,7 +24,8 @@ class PacketParser:
             black_domain_level = black_domain.count(".") + 1
             domain_same_level = ".".join(domain.split(".")[-black_domain_level:])
             if domain_same_level == black_domain:
-                logging.info("[Packet Parser] Domain %s is blacklisted by rule: %s", domain, black_domain)
+                if self.host_state.online:
+                    logging.info("[Packet Parser] Domain %s is blacklisted by rule: %s", domain, black_domain)
                 return True
         return False
 
@@ -284,6 +285,6 @@ class PacketParser:
     def prn_call(self, pkt):
         """This is the function that is called by the prn callback in Sniffer"""
         self.count += 1
-        if self.count % 500 == 0:
-            print(self.count,  " packets")
+        if self.count % 5000 == 0:
+            logging.info("[PacketParser] %d packets", self.count)
         safe_run(self.parse_packet, args=[pkt])
