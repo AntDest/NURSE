@@ -19,7 +19,7 @@ for c in capture_files:
         pass
     finally:
         t2 = time.time()
-        with open("alerts.json", "r") as fin:
+        with open(output_file, "r") as fin:
             data = json.load(fin)
             alert_list = data["alerts"]
             n_packets = data["n_packets"]
