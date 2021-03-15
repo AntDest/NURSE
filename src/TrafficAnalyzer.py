@@ -158,9 +158,10 @@ class TrafficAnalyzer():
             syn_on_port[key] = syn_on_port.get(key, 0) + syn_counts[flow]
         for key in syn_on_port:
             if syn_on_port[key] > MAX_CONNECTIONS_PER_PORT:
-                print(f"ALERT: DDoS {key[0]} has initiated {syn_on_port[key]} connections with {key[1]}:{key[2]}")
                 host_IP = key[0]
                 target_IP = key[1]
+                domain = self.host_state.reverse_pDNS(target_IP)
+                print(f"ALERT: DDoS {target_IP} has initiated {syn_on_port[key]} connections with {target_IP}:{key[2]} ({domain})")
                 timestamp_start = self.start_time
                 timestamp_end = self.stop_time
                 conn_count = syn_on_port[key]

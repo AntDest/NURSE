@@ -145,6 +145,14 @@ class HostState:
         self.traffic_monitor.new_device(ip)
 
 
+    def reverse_pDNS(self, queried_ip):
+        with self.lock:
+            for domain in self.passive_DNS:
+                for ip in self.passive_DNS[domain]:
+                    if ip == queried_ip:
+                        return domain
+        return "unknown_domain"
+
     def get_device_list(self):
         """
         Returns a list of dicts with MAC, IP, name and a boolean which indicates if device is spoofed 
