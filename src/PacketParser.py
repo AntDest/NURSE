@@ -256,7 +256,6 @@ class PacketParser:
                     if (sc.UDP in pkt) and pkt[sc.UDP].dport == 5353:
                         # could be mDNS:
                         pkt[sc.UDP].decode_payload_as(sc.DNS)
-                        pkt.show()
                         self.parse_DNS(pkt)
                     if sc.DHCP in pkt:
                         self.parse_DHCP(pkt)
