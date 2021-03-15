@@ -44,10 +44,8 @@ def main(online, capture_file, output_file):
             time.sleep(config.QUIT_AFTER_TIME)
             print("[Main] ===== Stopping because reached QUIT_AFTER_TIME running time")
         else:
-            while True:
-                if not online and time.time() - h.last_update > config.STOP_AFTER_WITH_NO_INFO:
-                    print("[Main] ===== Stopping because no data has been received since {}s".format(config.STOP_AFTER_WITH_NO_INFO))
-                    raise StopProgramException
+            while h.active:
+                continue
                 
     except (KeyboardInterrupt, StopProgramException):
         print("") # breakline after ^C to help reading

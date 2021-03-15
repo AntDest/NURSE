@@ -5,6 +5,7 @@ from src.utils.utils import merge_dict, FlowKey, FlowPkt
 from src.Classifier import DomainClassifier
 from src.utils.utils import get_mac, get_device_name, get_vendor_from_mac, disable_if_offline
 from src.utils.utils import StopProgramException, restart_on_error
+import config
 
 class TrafficMonitor:
     """
@@ -32,9 +33,6 @@ class TrafficMonitor:
         self.classifier = None
         self.last_timestamp = 0
         self.new_data = False #turns to true, if new data comes
-        if not self.host_state.online:
-            logging.info("[TrafficMonitor] Initialising classifier")
-            self.classifier = DomainClassifier()
 
     def start(self):
         if self.classifier is None:
@@ -150,6 +148,9 @@ class TrafficMonitor:
                 # split waiting time into small waits to check if process is still active
             else:
                 logging.info("[Monitor] No new data")
+                if not self.host_state.online and time.time() - self.host_state.last_update > config.STOP_AFTER_WITH_NO_INFO:
+                    print("[TrafficMonitor] ===== Stopping because no data has been received since {}s".format(config.STOP_AFTER_WITH_NO_INFO))
+                    self.host_state.active = False
             self.sleep(self.update_delay)
 
 

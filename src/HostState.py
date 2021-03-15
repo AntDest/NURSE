@@ -11,6 +11,7 @@ class HostState:
         self.lock = threading.Lock()
         self.online = online
         self.testing = enable_testing 
+        self.active = True
 
         # list of network parameters that will be useful for child threads
         self.host_ip = None
@@ -73,6 +74,7 @@ class HostState:
     def start(self):
         # TODO: watch for IP changes in the network
         logging.info("[Host] Getting connection parameters")
+        self.active = True
         if self.online:
             self.interface, self.host_ip, self.gateway_ip = sc.conf.route.route("0.0.0.0")
             self.host_mac = sc.get_if_hwaddr(self.interface)

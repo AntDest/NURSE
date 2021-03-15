@@ -4,7 +4,8 @@ import scapy.all as sc
 
 from src.utils.utils_variables import DNS_RECORD_TYPE
 from src.utils.utils import safe_run, FlowKey, FlowPkt, disable_if_offline
-
+import config
+from src.utils.utils import StopProgramException
 
 class PacketParser:
     def __init__(self, host_state, traffic_monitor):
@@ -285,6 +286,6 @@ class PacketParser:
     def prn_call(self, pkt):
         """This is the function that is called by the prn callback in Sniffer"""
         self.count += 1
-        if self.count % 1000 == 0:
+        if self.count % 5000 == 0:
             logging.info("[PacketParser] %d packets", self.count)
         safe_run(self.parse_packet, args=[pkt])

@@ -1,7 +1,8 @@
 import threading
 import logging
+import time
 import scapy.all as sc
-from config import QUIT_AFTER_PACKETS
+from config import QUIT_AFTER_PACKETS, DATABASE_UPDATE_DELAY
 class Sniffer:
     def __init__(self, host_state, packet_parser):
         self.host_state = host_state
@@ -11,7 +12,7 @@ class Sniffer:
         if self.host_state.online:    
             self.sniffer = sc.AsyncSniffer(
                 prn=packet_parser.prn_call,
-                count=QUIT_AFTER_PACKETS
+                stop_filter=lambda p: self.stop_filter(packet_parser.count)
             )
         else:
             if self.host_state.capture_file:
@@ -19,11 +20,23 @@ class Sniffer:
                     offline=self.host_state.capture_file,
                     prn=packet_parser.prn_call,
                     lfilter=self.filter,
-                    count=QUIT_AFTER_PACKETS
+                    stop_filter=lambda p: self.stop_filter(packet_parser.count)
                 )
             else:
                 raise Exception("Error: No capture file provided for offline mode")
     
+    def stop_filter(self, count):
+        if QUIT_AFTER_PACKETS > 0 and count >= QUIT_AFTER_PACKETS:
+            # leave some time for data to be updated and analyzed
+            time.sleep(2*DATABASE_UPDATE_DELAY)
+            # tell the host state to terminate
+            logging.info("[Sniffer] stopping because of packet limit")
+            self.host_state.active = False
+            # return True to stop the scapy sniffer
+            return True
+        else:
+            return False
+
     def start(self):
         """starts the Sniffer thread. To be called by host state"""
         with self.lock:
