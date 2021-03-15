@@ -45,27 +45,12 @@ class TrafficAnalyzer():
         pDNS = self.host_state.passive_DNS.copy()
         queried_domains = self.host_state.queried_domains.copy()
         nxdomains_counts_per_IP = {}
-        # for ip in queried_domains:
-        #     nxdomain_count = 0
-        #     # read from the end, and break when timestamp is too old
-        #     for query in reversed(queried_domains[ip]):
-        #         ts = query[0]
-        #         if ts > self.stop_time:
-        #             continue
-        #         elif ts < self.start_time:
-        #             break
-
-        #         domain = query[1]
-        #         if domain not in pDNS:
-        #             # should not happen, but could with some bugs due to not deep enough copies
-        #             logging.error("[Analyzer] %s is in queried domains but not in pDNS")
-        #             return
-        #         if len(pDNS[domain]) == 0:
-        #             nxdomain_count += 1
-        #     nxdomains_counts_per_IP[ip] = nxdomain_count
-
-
-        # TODO: THIS IS NOT NXDOMAIN BUT UNKNOWN IPS
+        for ip in queried_domains:
+            for pair in queried_domains[ip]:
+                domain = pair[1]
+                if domain in pDNS:
+                    if pDNS[domain] == []:
+                        nxdomains_counts_per_IP[ip] = nxdomains_counts_per_IP.get(ip, 0) + 1
         return nxdomains_counts_per_IP
 
     def analyze_flows(self, flag):
@@ -89,8 +74,31 @@ class TrafficAnalyzer():
         return flag_counts, contacted_IPs
 
     def get_scores_of_contacted_domains(self):
-        # self.host_state.alert_manager.new_alert_domains(ip, self.start_time, self.stop_time, bad_score_count, DOMAIN_SCORE_THRESHOLD)
-        pass
+        domain_scores = self.host_state.domain_scores.copy()
+        queried_domains = self.host_state.queried_domains.copy()
+        scores_per_IP = {}
+        contacted_domains = {}
+        for ip in queried_domains:
+            contacted_domains[ip] = set()
+            scores_per_IP[ip] = []
+            # contacted_domains[ip] = set([p[1] for p in queried_domains[ip]])
+            for p in queried_domains[ip]:
+                timestamp = p[0]
+                domain = p[1]
+                if timestamp > self.stop_time: 
+                    break
+                if timestamp <= self.stop_time and timestamp >= self.start_time:
+                    if domain not in contacted_domains[ip]:
+                        contacted_domains[ip].add(domain)
+                        if domain in domain_scores:
+                            scores_per_IP[ip].append(domain_scores[domain])
+
+        for ip in scores_per_IP:
+            bad_scores = [s for s in scores_per_IP[ip] if s > DOMAIN_SCORE_THRESHOLD]
+            bad_scores_count = len(bad_scores)
+            if bad_scores_count > MAX_DOMAIN_COUNT:
+                self.host_state.alert_manager.new_alert_domains(ip, self.start_time, self.stop_time, bad_scores_count, DOMAIN_SCORE_THRESHOLD)
+        return scores_per_IP
 
 
     def detect_nxdomain_alert(self, nxdomain_counts):
