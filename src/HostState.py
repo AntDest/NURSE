@@ -81,7 +81,8 @@ class HostState:
         self.ARP_spoof_thread.victim_ip_list = self.victim_ip_list
         self.ARP_spoof_thread.start()
         # run server first to have the app ready
-        self.server_thread.start()
+        if self.testing:
+            self.server_thread.start()
         self.traffic_monitor.start()
         self.sniffer_thread.start()
         self.traffic_analyzer.start()

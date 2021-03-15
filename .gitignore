@@ -11,4 +11,4 @@ build
 main.spec
 main_onefile.spec
 
-captures/
+evaluation/

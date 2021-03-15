@@ -21,6 +21,25 @@ logging.basicConfig(stream=sys.stdout, format=logging_format, level=logging.DEBU
 logging.getLogger("requests").setLevel(logging.WARNING)
 logging.getLogger("urllib3").setLevel(logging.WARNING)
 
+
+class SetEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, set):
+            return list(obj)
+        return json.JSONEncoder.default(self, obj)
+
+def export_to_file(h, output_file):
+    data = {}
+    data["n_packets"] = h.packet_parser.count
+    data["alerts"] = h.alert_manager.get_list_as_dict()
+    data["ARP_table"] = h.arp_table
+    # data["pDNS"] = h.passive_DNS
+    # data["flows"] = h.flows
+    data["domain_scores"] = h.domain_scores
+    with open(output_file, "w") as f:
+        json.dump(data, f, indent=2, cls=SetEncoder)
+
+
 def main(online, capture_file, output_file):
     logging.info("[Main] Initializing HostState")
     h = HostState(online)
@@ -56,11 +75,9 @@ def main(online, capture_file, output_file):
     finally:
         print("[Main] ---------------------- Ending ----------------------")
         logging.info("[Main] %d packets captures", h.packet_parser.count)
-        h.stop()
         if output_file != "":
-            with open(output_file, "w") as f:
-                alerts = h.alert_manager.get_list_as_dict()
-                json.dump(alerts, f)
+            export_to_file(h, output_file)
+        h.stop()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Options for the IoT inspection program')
