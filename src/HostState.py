@@ -7,11 +7,12 @@ from config import CHECK_IP_URL_LIST
 
 class HostState:
     """Host state that starts all threads and stores the global information"""
-    def __init__(self, online, enable_testing=False):
+    def __init__(self, online):
         self.lock = threading.Lock()
         self.online = online
-        self.testing = enable_testing 
         self.active = True
+
+        self.restart_sniffing_flag = False
 
         # list of network parameters that will be useful for child threads
         self.host_ip = None
@@ -70,7 +71,7 @@ class HostState:
             self.capture_file = capture_file
         else:
             self.capture_file = None
-            
+
     def start(self):
         # TODO: watch for IP changes in the network
         logging.info("[Host] Getting connection parameters")
@@ -81,7 +82,7 @@ class HostState:
         self.ARP_spoof_thread.victim_ip_list = self.victim_ip_list
         self.ARP_spoof_thread.start()
         # run server first to have the app ready
-        if self.testing:
+        if self.online:
             self.server_thread.start()
         self.traffic_monitor.start()
         self.sniffer_thread.start()
@@ -104,9 +105,25 @@ class HostState:
         # print("Queried domains: ", self.queried_domains)
         # print("Passive DNS: ", self.passive_DNS)
         if len(self.alert_manager.alert_list) > 0:
-            print("Alerts: ")
-            for a in self.alert_manager.alert_list:
+            print("Alerts: ", len(self.alert_manager.alert_list))
+            for a in self.alert_manager.alert_list[:5]:
                 print(a)
+
+    def restart_sniffer(self):
+        self.sniffer_thread.stop()
+        self.restart_sniffing_flag = False
+        print("Packets ",  self.packet_parser.count)
+        self.reset()
+        self.sniffer_thread.start()
+
+    def main_loop(self):
+        while self.active:
+            # pass
+            if self.restart_sniffing_flag:
+                self.restart_sniffer()
+
+
+
 
     def get_external_ip(self):
         # query an API for the exernal IP
@@ -118,7 +135,6 @@ class HostState:
                     external_ip = r.text.strip()
                     break
         return external_ip
-        
 
 
     def add_to_victim_list(self, ip):
@@ -126,8 +142,8 @@ class HostState:
             self.victim_ip_list.append(ip)
             # TODO: if offline: rescan the file with new victim list
             if not self.online:
-                self.sniffer_thread.restart()
-    
+                self.restart_sniffing_flag = True
+
     def remove_from_victim_list(self, ip):
         if ip in self.victim_ip_list:
             self.victim_ip_list.remove(ip)
@@ -155,7 +171,7 @@ class HostState:
 
     def get_device_list(self):
         """
-        Returns a list of dicts with MAC, IP, name and a boolean which indicates if device is spoofed 
+        Returns a list of dicts with MAC, IP, name and a boolean which indicates if device is spoofed
         If a device has no name, the name is \"\"
         """
         devices = []

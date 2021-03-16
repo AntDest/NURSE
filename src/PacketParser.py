@@ -44,7 +44,7 @@ class PacketParser:
         while len(arp_table) < 2:
             with self.host_state.lock:
                 arp_table = self.host_state.arp_table.copy()
-        
+
         if dst_mac == self.host_state.host_mac and src_ip in self._victim_list:
             # Target --> Local ==> Local --> Gateway
             # logging.debug("Forwarding packet to gateway")
@@ -146,7 +146,7 @@ class PacketParser:
             mac =  pkt[sc.ARP].hwsrc
             ip = pkt[sc.ARP].psrc
             self.traffic_monitor.add_to_ARP_table(ip, mac)
-            
+
             # check the queried IP if it is in the local network
             queried_ip = pkt[sc.ARP].pdst
             if ip_address(queried_ip).is_private:
@@ -160,9 +160,9 @@ class PacketParser:
         Parse a TCP packet to extract information and send it to the traffic monitor
         protocol should be \"TCP\" or \"UDP\"
         """
-        if protocol == "TCP": 
+        if protocol == "TCP":
             proto = sc.TCP
-        elif protocol == "UDP": 
+        elif protocol == "UDP":
             proto = sc.UDP
         else:
             raise Exception(f"Unknown protocol {protocol}")
@@ -172,7 +172,7 @@ class PacketParser:
             ip_dst = pkt[sc.IP].dst
             port_src = pkt[proto].sport
             port_dst = pkt[proto].dport
-            inbound = False     # inbound means out to in 
+            inbound = False     # inbound means out to in
         elif pkt[sc.IP].dst in self._victim_list:
             ip_src = pkt[sc.IP].dst
             ip_dst = pkt[sc.IP].src
@@ -221,7 +221,7 @@ class PacketParser:
         except KeyError:
             return
 
-        # if it is a victim MAC: the packet is a query 
+        # if it is a victim MAC: the packet is a query
         if pkt[sc.Ether].src in victims_MAC:
             # get IP that corresponds to MAC by reversing the ARP table
             list_IPs = list(self.host_state.arp_table.values())
@@ -286,6 +286,7 @@ class PacketParser:
     def prn_call(self, pkt):
         """This is the function that is called by the prn callback in Sniffer"""
         self.count += 1
-        if self.count % 5000 == 0:
-            logging.info("[PacketParser] %d packets", self.count)
+        if not self.host_state.online:
+            if self.count % 10000 == 0:
+                logging.info("%s: [PacketParser] %d packets", self.host_state.capture_file.split("/")[-1], self.count)
         safe_run(self.parse_packet, args=[pkt])

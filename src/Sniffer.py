@@ -8,23 +8,10 @@ class Sniffer:
         self.host_state = host_state
         self.lock = threading.Lock()
         self._active = False
-        self.filter = lambda p: (p.haslayer(sc.IP) or p.haslayer(sc.ARP)) 
-        if self.host_state.online:    
-            self.sniffer = sc.AsyncSniffer(
-                prn=packet_parser.prn_call,
-                stop_filter=lambda p: self.stop_filter(packet_parser.count)
-            )
-        else:
-            if self.host_state.capture_file:
-                self.sniffer = sc.AsyncSniffer(
-                    offline=self.host_state.capture_file,
-                    prn=packet_parser.prn_call,
-                    lfilter=self.filter,
-                    stop_filter=lambda p: self.stop_filter(packet_parser.count)
-                )
-            else:
-                raise Exception("Error: No capture file provided for offline mode")
-    
+        self.packet_parser = packet_parser
+        self.filter = lambda p: (p.haslayer(sc.IP) or p.haslayer(sc.ARP))
+        self._thread = None
+
     def stop_filter(self, count):
         if QUIT_AFTER_PACKETS > 0 and count >= QUIT_AFTER_PACKETS:
             # leave some time for data to be updated and analyzed
@@ -35,15 +22,36 @@ class Sniffer:
             # return True to stop the scapy sniffer
             return True
         else:
+            if count%1000 == 0:
+                if not self._active:
+                    return True
             return False
 
-    def start(self):
+    def main(self):
         """starts the Sniffer thread. To be called by host state"""
+        logging.info("[Sniffer] Sniffer starting")
         with self.lock:
             self._active = True
+        if self.host_state.online:
+            self.sniffer = sc.AsyncSniffer(
+                prn=self.packet_parser.prn_call,
+                stop_filter=lambda p: self.stop_filter(self.packet_parser.count)
+            )
+            self.sniffer.start()
+        else:
+            sc.sniff(
+                    offline=self.host_state.capture_file,
+                    prn=self.packet_parser.prn_call,
+                    lfilter=self.filter,
+                    stop_filter=lambda p: self.stop_filter(self.packet_parser.count),
+                    store=False
+                )
 
-        logging.info("[Sniffer] Sniffer starting")
-        self.sniffer.start()
+
+    def start(self):
+        self._thread = threading.Thread(target=self.main)
+        self._thread.start()
+
 
     def stop(self):
         """starts the Sniffer thread. To be called by host state"""
@@ -51,17 +59,7 @@ class Sniffer:
             self._active = False
 
         logging.info("[Sniffer] Sniffer stopping")
-        try:
-            self.sniffer.stop(join=False)
-        except sc.Scapy_Exception:
-            pass
-
-    def restart(self):
-        """Used to restart the sniffer, especially useful in offline mode to rescan pcap filewith new config"""
-        if self._active:
-            self.stop()
-            self.host_state.reset()
-            self.start()
+        self._thread.join()
 
     def _is_active(self):
         """return True if the thread has to stop"""

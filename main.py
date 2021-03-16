@@ -17,7 +17,7 @@ import config
 from src.utils.utils import StopProgramException
 
 logging_format = "%(asctime)s: %(message)s"
-logging.basicConfig(stream=sys.stdout, format=logging_format, level=logging.DEBUG, datefmt="%H:%M:%S")
+logging.basicConfig(stream=sys.stdout, format=logging_format, level=logging.INFO, datefmt="%H:%M:%S")
 logging.getLogger("requests").setLevel(logging.WARNING)
 logging.getLogger("urllib3").setLevel(logging.WARNING)
 
@@ -38,6 +38,7 @@ def export_to_file(h, output_file):
     data["domain_scores"] = h.domain_scores
     with open(output_file, "w") as f:
         json.dump(data, f, indent=2, cls=SetEncoder)
+    print(f"[Main] Dumped data to {output_file}")
 
 
 def main(online, capture_file, output_file):
@@ -63,9 +64,8 @@ def main(online, capture_file, output_file):
             time.sleep(config.QUIT_AFTER_TIME)
             print("[Main] ===== Stopping because reached QUIT_AFTER_TIME running time")
         else:
-            while h.active:
-                continue
-                
+            h.main_loop()
+
     except (KeyboardInterrupt, StopProgramException):
         print("") # breakline after ^C to help reading
         logging.info("[Main] Keyboard Interrupt, ending")
@@ -89,8 +89,8 @@ if __name__ == "__main__":
     output_path = ""
     if args.offline != "":
         arg_online = False #online at true enables packet sending, packet forwarding
-        capture_path = args.offline    
+        capture_path = args.offline
     if args.output != "":
-        output_path = args.output    
-    
+        output_path = args.output
+
     main(arg_online, capture_file=capture_path, output_file=output_path)

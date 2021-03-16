@@ -14,12 +14,9 @@ class TrafficMonitor:
     """
     def __init__(self, host_state, update_delay):
         self.host_state = host_state
-        
         self.updater_thread = threading.Thread(target=self.safe_updater)
         self.lock = threading.Lock()
         self.active = True
-        if not self.host_state.online:
-            update_delay = 3
         self.update_delay = update_delay
 
         self.device_names = {}      # MAC -> name
@@ -40,7 +37,7 @@ class TrafficMonitor:
             self.classifier = DomainClassifier()
         with self.lock:
             self.active = True
-        
+
         logging.info("[Monitor] Traffic monitor starting")
         self.updater_thread.start()
 
@@ -78,15 +75,15 @@ class TrafficMonitor:
     # active discovery function, so disabled when offline
     def new_device(self, ip, mac=""):
         """Gathers info and adds the device to ARP table and device names"""
-        if ip != "0.0.0.0": 
+        if ip != "0.0.0.0":
             mac = self.new_device_get_mac(ip, mac)
             self.new_device_get_name(ip, mac)
             self.new_data = True
             if not self.host_state.online:
                 self.host_state.add_to_victim_list(ip)
 
-        
-    
+
+
     def sleep(self, seconds):
         """Sleep for given seconds, but check if still active every second"""
         for _ in range(seconds):
@@ -100,8 +97,8 @@ class TrafficMonitor:
             if self.new_data:
                 for ip in self.arp_table.copy():
                     self.new_device(ip)
-                    
-                logging.debug("[Monitor] Updating data to host thread")
+
+                # logging.debug("[Monitor] Updating data to host thread")
                 with self.host_state.lock:
                     # update passive DNS: for each domain add the new IPs (the IP list is a set)
                     for domain in self.passive_DNS:
@@ -136,18 +133,19 @@ class TrafficMonitor:
                     # update the list of flows
                     for flow_key in self.flows.copy():
                         if flow_key not in self.host_state.flows:
-                            self.host_state.flows[flow_key] = [] 
+                            self.host_state.flows[flow_key] = []
                         self.host_state.flows[flow_key] += self.flows[flow_key]
 
                     self.host_state.domain_scores = self.domain_scores
                     self.host_state.last_update = time.time()
                     self.host_state.last_timestamp = self.last_timestamp
-                    self.new_data = False        
+                    self.new_data = False
                 # end of lock
                 # wait until next iteration,
                 # split waiting time into small waits to check if process is still active
             else:
                 logging.info("[Monitor] No new data")
+                print("offline: {}, timestamp is {} and last update is {}. Difference={} and STOP_AFTER is {}".format(not self.host_state.online, int(time.time()), self.host_state.last_update, time.time() - self.host_state.last_update, config.STOP_AFTER_WITH_NO_INFO))
                 if not self.host_state.online and time.time() - self.host_state.last_update > config.STOP_AFTER_WITH_NO_INFO:
                     print("[TrafficMonitor] ===== Stopping because no data has been received since {}s".format(config.STOP_AFTER_WITH_NO_INFO))
                     self.host_state.active = False
@@ -174,7 +172,7 @@ class TrafficMonitor:
             self.passive_DNS[domain_name] = set(ip_list)
             # new domain: compute its score
             score = self.score_domain(domain_name)
-            self.domain_scores[domain_name] = score
+            self.domain_scores[domain_name] = round(score,2)
         else:
             self.passive_DNS[domain_name].update(ip_list)
             self.new_data = True

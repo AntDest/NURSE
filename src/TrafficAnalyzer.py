@@ -39,7 +39,7 @@ class TrafficAnalyzer():
 
     def count_NXDOMAIN_per_IP(self):
         """
-        Analyze NXDOMAINS in the last time window, 
+        Analyze NXDOMAINS in the last time window,
         sends an alert to the alert manager if there are more than threshold per time window
         """
         pDNS = self.host_state.passive_DNS.copy()
@@ -56,7 +56,7 @@ class TrafficAnalyzer():
     def analyze_flows(self, flag):
         """counts packets with the exact same flags sent by a host to a remote IP in the time window"""
         # keys are FlowKey, values are SYN counts in the time window
-        flag_counts = {} 
+        flag_counts = {}
         contacted_IPs = {}
         for flow in self.host_state.flows.copy():
             # read packets from end to beginning
@@ -85,7 +85,7 @@ class TrafficAnalyzer():
             for p in queried_domains[ip]:
                 timestamp = p[0]
                 domain = p[1]
-                if timestamp > self.stop_time: 
+                if timestamp > self.stop_time:
                     break
                 if timestamp <= self.stop_time and timestamp >= self.start_time:
                     if domain not in contacted_domains[ip]:
@@ -105,7 +105,7 @@ class TrafficAnalyzer():
         """Raises alert if one host generated too much NXDOMAIN"""
         for ip in nxdomain_counts:
             if nxdomain_counts[ip] > MAX_NXDOMAIN:
-                print("ALERT: too many NXDOMAIN from host ", ip)
+                logging.debug("ALERT: too many NXDOMAIN from host %s", ip)
                 timestamp_start = self.start_time
                 timestamp_end = self.stop_time
                 nxcount = nxdomain_counts[ip]
@@ -118,13 +118,13 @@ class TrafficAnalyzer():
         ports_contacted = {}
         for flow in syn_counts:
             key = (getattr(flow,"IP_src"), getattr(flow,"IP_dst"))
-            if key not in ports_contacted: 
+            if key not in ports_contacted:
                 ports_contacted[key] = set()
             ports_contacted[key].add(getattr(flow, "port_dst"))
         # print(ports_contacted)
         for key in ports_contacted:
             if len(ports_contacted[key]) > MAX_PORTS_PER_HOST:
-                print(f"ALERT: port scanning on {key}: {len(ports_contacted[key])} port contacted ", ports_contacted[key])
+                logging.debug(f"ALERT: port scanning on {key}: {len(ports_contacted[key])} port contacted ", ports_contacted[key])
                 host_IP = key[0]
                 target_IP = key[1]
                 timestamp_start = self.start_time
@@ -137,7 +137,7 @@ class TrafficAnalyzer():
         ip_contacted = {}
         for flow in syn_counts:
             key = (getattr(flow,"IP_src"), getattr(flow,"port_dst"))
-            if key not in ip_contacted: 
+            if key not in ip_contacted:
                 ip_contacted[key] = set()
             ip_contacted[key].add(getattr(flow, "IP_dst"))
         for key in ip_contacted:
@@ -161,7 +161,7 @@ class TrafficAnalyzer():
                 host_IP = key[0]
                 target_IP = key[1]
                 domain = self.host_state.reverse_pDNS(target_IP)
-                print(f"ALERT: DDoS {target_IP} has initiated {syn_on_port[key]} connections with {target_IP}:{key[2]} ({domain})")
+                logging.debug(f"ALERT: DDoS {host_IP} has initiated {syn_on_port[key]} connections with {target_IP}:{key[2]} ({domain})")
                 timestamp_start = self.start_time
                 timestamp_end = self.stop_time
                 conn_count = syn_on_port[key]
@@ -176,7 +176,7 @@ class TrafficAnalyzer():
                 found = False
                 for domain in pDNS:
                     if ip_dst in pDNS[domain]:
-                        found = True 
+                        found = True
                         break
                 if not found:
                     contacted_with_no_DNS.append((ip_src,ip_dst))
@@ -199,8 +199,7 @@ class TrafficAnalyzer():
     def analyzer(self):
         import datetime
         while self.active:
-            logging.debug("[Analyzer] New iteration")
-            # TODO: if scanning PCAP, do not use time.time() !
+            # logging.debug("[Analyzer] New iteration")
             if self.host_state.online:
                 stop_time = time.time()
                 start_time = stop_time - self.TIME_WINDOW

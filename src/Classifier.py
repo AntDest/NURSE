@@ -16,7 +16,7 @@ class DomainClassifier():
 
         with open(self.source_file, 'rb') as fin:
             self.classifier = pickle.load(fin)
-        
+
         # Define the ngram counter
         # look for ngrams between 3 and 5 characters
         _english_ngrams_min_size = 3
@@ -38,7 +38,8 @@ class DomainClassifier():
 
 
     def delete_file(self):
-        os.remove("classifier.save")
+        if os.path.exists(self.source_file):
+            os.remove(self.source_file)
 
     def get_classifier_from_file(self, source):
         if os.path.isdir(source):
@@ -46,7 +47,7 @@ class DomainClassifier():
             self.source_file = "classifier.save"
         else:
             self.source_file = source
-    
+
 
     def compute_english_score(self, domain):
         return feature_english_score(domain, self.english_counter, self.english_counts)
@@ -60,7 +61,7 @@ class DomainClassifier():
                 # compute the 3 grams
                 df_features['3gram_avg'], df_features['3gram_std'] = \
                         zip(*df_features['domain'].map(lambda x:feature_ngrams_distribution(ignore_TLD(x), 3)))
-            elif feature == "3gram_std": 
+            elif feature == "3gram_std":
                 continue # already computed in avg_3gram
             elif feature == "english_score":
                 df_features["english_score"] = self.compute_english_score(ignore_TLD(domain))

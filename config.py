@@ -5,12 +5,12 @@ BLACKLIST_DOMAINS = [
     "youtube.com",
     "facebook.com",
     "neverssl.com",
-    "grenoble.fr" 
+    "grenoble.fr"
 ]
 
 DATABASE_UPDATE_DELAY = 5
 # Stop after 5 iterations with no more packets
-STOP_AFTER_WITH_NO_INFO = 5*DATABASE_UPDATE_DELAY 
+STOP_AFTER_WITH_NO_INFO = 60
 # If QUIT_AFTER > 0, the program will stop after the given number of seconds
 QUIT_AFTER_TIME = 0
 QUIT_AFTER_PACKETS = 0
