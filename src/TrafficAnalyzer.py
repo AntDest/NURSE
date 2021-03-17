@@ -1,6 +1,7 @@
 import threading
 import logging
 import time
+import datetime
 from src.utils.utils import restart_on_error, check_ip_blacklist
 from config import TIME_WINDOW, MAX_CONNECTIONS_PER_PORT, MAX_NXDOMAIN, MAX_PORTS_PER_HOST, MAX_IP_PER_PORT, WHITELIST_PORTS, DATABASE_UPDATE_DELAY, DOMAIN_SCORE_THRESHOLD, MAX_DOMAIN_COUNT
 
@@ -13,7 +14,7 @@ class TrafficAnalyzer():
         self.iteration_time = DATABASE_UPDATE_DELAY
 
         self.thread = threading.Thread(target=self.safe_run_analyzer)
-        self.thread.daemon = True
+        self.thread.daemon = False
         self.lock = threading.Lock()
 
         self.start_time = 0
@@ -29,6 +30,8 @@ class TrafficAnalyzer():
         logging.info("[Analyzer] Traffic analyzer stopping")
         with self.lock:
             self.active = False
+        self.analyzer_loop()
+        self.thread.join()
 
     def sleep(self, seconds):
         for _ in range(seconds):
@@ -196,6 +199,7 @@ class TrafficAnalyzer():
 
 
     def detect_alerts(self, start_time, stop_time):
+        logging.info("[Analyzer] Detecting alerts")
         self.start_time = start_time
         self.stop_time = stop_time
         nxdomain_counts = self.count_NXDOMAIN_per_IP()
@@ -208,32 +212,34 @@ class TrafficAnalyzer():
         self.detect_dos_on_port(syn_counts)
         self.detect_contacted_ip(contacted_ips)
 
+
     def analyzer(self):
-        import datetime
+        if self.host_state.online:
+            stop_time = time.time()
+            start_time = stop_time - self.TIME_WINDOW
+            h1 = datetime.datetime.fromtimestamp(start_time).strftime('%H:%M:%S')
+            h2 = datetime.datetime.fromtimestamp(stop_time).strftime('%H:%M:%S')
+            logging.debug("[Analyzer] Analyzing data to detect alerts between %s and %s (window = %d)", h1, h2, self.TIME_WINDOW)
+            self.detect_alerts(start_time, stop_time)
+        else:
+            new_stop_time = self.host_state.last_timestamp
+            if new_stop_time > 0:
+                if self.stop_time > 0:
+                    prev_stop_time = self.stop_time
+                else:
+                    # first iteration, do only one time window, because no previous stop time is set
+                    prev_stop_time = new_stop_time - self.TIME_WINDOW
+                for start_time in range(prev_stop_time, new_stop_time, self.TIME_WINDOW):
+                    stop_time = start_time + self.TIME_WINDOW
+                    # h1 = datetime.datetime.fromtimestamp(start_time).strftime('"%m/%d/%Y, %H:%M:%S')
+                    # h2 = datetime.datetime.fromtimestamp(stop_time).strftime('"%m/%d/%Y, %H:%M:%S')
+                    # logging.debug("[Analyzer] Analyzing data to detect alerts between %s and %s (window = %d)", h1, h2, self.TIME_WINDOW)
+                    self.detect_alerts(start_time, stop_time)
+
+    def analyzer_loop(self):
         while self.active:
-            # logging.debug("[Analyzer] New iteration")
-            if self.host_state.online:
-                stop_time = time.time()
-                start_time = stop_time - self.TIME_WINDOW
-                h1 = datetime.datetime.fromtimestamp(start_time).strftime('%H:%M:%S')
-                h2 = datetime.datetime.fromtimestamp(stop_time).strftime('%H:%M:%S')
-                logging.debug("[Analyzer] Analyzing data to detect alerts between %s and %s (window = %d)", h1, h2, self.TIME_WINDOW)
-                self.detect_alerts(start_time, stop_time)
-            else:
-                new_stop_time = self.host_state.last_timestamp
-                if new_stop_time > 0:
-                    if self.stop_time > 0:
-                        prev_stop_time = self.stop_time
-                    else:
-                        # first iteration, do only one time window, because no previous stop time is set
-                        prev_stop_time = new_stop_time - self.TIME_WINDOW
-                    for start_time in range(prev_stop_time, new_stop_time, self.TIME_WINDOW):
-                        stop_time = start_time + self.TIME_WINDOW
-                        h1 = datetime.datetime.fromtimestamp(start_time).strftime('"%m/%d/%Y, %H:%M:%S')
-                        h2 = datetime.datetime.fromtimestamp(stop_time).strftime('"%m/%d/%Y, %H:%M:%S')
-                        # logging.debug("[Analyzer] Analyzing data to detect alerts between %s and %s (window = %d)", h1, h2, self.TIME_WINDOW)
-                        self.detect_alerts(start_time, stop_time)
+            self.analyzer()
             self.sleep(self.iteration_time)
 
     def safe_run_analyzer(self):
-        restart_on_error(self.analyzer)
+        restart_on_error(self.analyzer_loop)
