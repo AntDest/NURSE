@@ -95,3 +95,11 @@ class AlertNoDNS(Alert):
         message = f"{host_IP} contacted {ip_dst} with no DNS query before at {date.strftime('%H:%M:%S')}"
         super().__init__(host_IP, severity, message)
 
+class AlertBlacklist(Alert):
+    name = "Blacklisted IP"
+    def __init__(self, host_IP, ip_dst, timestamp):
+        severity = 2
+        self.timestamp = timestamp
+        date = datetime.datetime.fromtimestamp(timestamp)
+        message = f"{host_IP} contacted {ip_dst} which is blacklisted, time:{date.strftime('%H:%M:%S')}"
+        super().__init__(host_IP, severity, message)
