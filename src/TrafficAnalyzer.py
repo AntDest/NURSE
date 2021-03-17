@@ -51,7 +51,7 @@ class TrafficAnalyzer():
             for pair in queried_domains[ip]:
                 domain = pair[1]
                 if domain in pDNS:
-                    if pDNS[domain] == []:
+                    if len(pDNS[domain]) == 0:
                         nxdomains_counts_per_IP[ip] = nxdomains_counts_per_IP.get(ip, 0) + 1
         return nxdomains_counts_per_IP
 
