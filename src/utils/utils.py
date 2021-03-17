@@ -61,7 +61,7 @@ def get_vendor_from_mac(mac):
         r = requests.get(url + mac_str)
         response = json.loads(r.text)
         if not response["success"]:
-            return "Unknown" 
+            return "Unknown"
         else:
             return response["payload"][0]["vendor"]
     except:
@@ -139,3 +139,13 @@ def get_device_name(ip):
     if name[-5:] == ".home":
         name = name[:-5]
     return name
+
+def check_ip_blacklist(ip):
+    ip_reverse = ".".join(ip.split(".")[::-1])
+    url = ip_reverse + "." + "zen.spamhaus.org"
+    try:
+        # result codes legend here: https://www.spamhaus.org/zen/
+        result_code = socket.gethostbyname(url)
+        return True
+    except socket.gaierror:
+        return False

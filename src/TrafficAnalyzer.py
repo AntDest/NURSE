@@ -1,7 +1,7 @@
 import threading
 import logging
 import time
-from src.utils.utils import restart_on_error
+from src.utils.utils import restart_on_error, check_ip_blacklist
 from config import TIME_WINDOW, MAX_CONNECTIONS_PER_PORT, MAX_NXDOMAIN, MAX_PORTS_PER_HOST, MAX_IP_PER_PORT, WHITELIST_PORTS, DATABASE_UPDATE_DELAY, DOMAIN_SCORE_THRESHOLD, MAX_DOMAIN_COUNT
 
 class TrafficAnalyzer():
@@ -168,11 +168,23 @@ class TrafficAnalyzer():
                 self.host_state.alert_manager.new_alert_dos(host_IP, target_IP, timestamp_start, timestamp_end, conn_count)
 
 
-    def detect_contacted_ip_without_dns(self, contacted_ips):
+    def detect_contacted_ip(self, contacted_ips):
         pDNS = self.host_state.passive_DNS.copy()
+        blacklisted_ips = self.host_state.blacklisted_ips.copy()
+
         contacted_with_no_DNS = []
         for ip_src in contacted_ips:
             for ip_dst in contacted_ips[ip_src]:
+                # check if IP is blacklisted
+                if ip_dst not in blacklisted_ips:
+                    is_in_blacklist = check_ip_blacklist(ip_dst)
+                    self.host_state.blacklisted_ips[ip_dst] = is_in_blacklist
+                else:
+                    is_in_blacklist = blacklisted_ips[ip_dst]
+                if is_in_blacklist:
+                    self.host_state.alert_manager.new_alert_blacklisted_ip(ip_src, ip_dst, self.start_time)
+
+                # check if IP was in pDNS
                 found = False
                 for domain in pDNS:
                     if ip_dst in pDNS[domain]:
@@ -181,6 +193,7 @@ class TrafficAnalyzer():
                 if not found:
                     contacted_with_no_DNS.append((ip_src,ip_dst))
                     self.host_state.alert_manager.new_alert_no_dns(ip_src, ip_dst, self.start_time)
+
 
 
     def detect_alerts(self, start_time, stop_time):
@@ -194,7 +207,7 @@ class TrafficAnalyzer():
         self.detect_nxdomain_alert(nxdomain_counts)
         self.detect_vertical_port_scan(syn_counts)
         self.detect_dos_on_port(syn_counts)
-        self.detect_contacted_ip_without_dns(contacted_ips)
+        self.detect_contacted_ip(contacted_ips)
 
     def analyzer(self):
         import datetime

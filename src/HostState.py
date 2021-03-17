@@ -52,6 +52,7 @@ class HostState:
         self.last_update = time.time()
         self.last_timestamp = 0     # last timestamp of uploaded data
 
+        self.blacklisted_ips = {}
 
     def reset(self):
         """resets some values, used when restarting parsing"""

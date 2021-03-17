@@ -1,4 +1,4 @@
-from src.alert import AlertIPSpoofed, AlertNXDOMAIN, AlertVertPortScanning, AlertHorizPortScanning, AlertDoS, AlertNoDNS, AlertDomains
+from src.alert import *
 
 
 class AlertManager():
@@ -10,7 +10,7 @@ class AlertManager():
     def new_alert_IP_spoofed(self, host_IP, spoofed_IP, timestamp):
         a = AlertIPSpoofed(host_IP, spoofed_IP, timestamp)
         self.alert_list.append(a)
-    
+
     def new_alert_nxdomain(self, host_IP, timestamp_start, timestamp_end, nx_count):
         a = AlertNXDOMAIN(host_IP, timestamp_start, timestamp_end, nx_count)
         self.alert_list.append(a)
@@ -22,7 +22,7 @@ class AlertManager():
     def new_alert_horizontal_portscan(self, host_IP, target_port, timestamp_start, timestamp_end, ip_count):
         a = AlertHorizPortScanning(host_IP, target_port, timestamp_start, timestamp_end, ip_count)
         self.alert_list.append(a)
-    
+
     def new_alert_dos(self, host_IP, target_IP, timestamp_start, timestamp_end, connection_count):
         a = AlertDoS(host_IP, target_IP, timestamp_start, timestamp_end, connection_count)
         self.alert_list.append(a)
@@ -35,6 +35,10 @@ class AlertManager():
         a = AlertNoDNS(host_IP, ip_dst, timestamp)
         self.alert_list.append(a)
 
+    def new_alert_blacklisted_ip(self, ip_src, ip_dst, timestamp):
+        a = AlertBlacklist(ip_src, ip_dst, timestamp)
+        self.alert_list.append(a)
+
     def get_list_as_dict(self):
         dict_list = []
         for a in self.alert_list:
@@ -45,4 +49,4 @@ class AlertManager():
             alert_dict["timestamp"] = a.timestamp
             dict_list.append(alert_dict)
         return dict_list
-        
+
