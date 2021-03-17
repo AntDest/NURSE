@@ -29,7 +29,6 @@ class TrafficAnalyzer():
         logging.info("[Analyzer] Traffic analyzer stopping")
         with self.lock:
             self.active = False
-        self.thread.join()
 
     def sleep(self, seconds):
         for _ in range(seconds):
