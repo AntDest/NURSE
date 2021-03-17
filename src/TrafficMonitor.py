@@ -44,7 +44,8 @@ class TrafficMonitor:
     def stop(self):
         logging.info("[Monitor] Traffic monitor stopping")
         self.active = False
-        self.classifier.delete_file()
+        if self.host_state.online:
+            self.classifier.delete_file()
         self.updater_thread.join()
 
 
@@ -52,7 +53,8 @@ class TrafficMonitor:
         # obtain mac of IP
         if ip not in self.arp_table:
             if mac == "":
-                mac = get_mac(ip)
+                if self.host_state.online:
+                    mac = get_mac(ip)
             if mac is None or mac == "":
                 # return and do not add this empty mac to the ARP table
                 return ""
@@ -98,7 +100,7 @@ class TrafficMonitor:
                 for ip in self.arp_table.copy():
                     self.new_device(ip)
 
-                # logging.debug("[Monitor] Updating data to host thread")
+                logging.debug("[Monitor] Updating data to host thread")
                 with self.host_state.lock:
                     # update passive DNS: for each domain add the new IPs (the IP list is a set)
                     for domain in self.passive_DNS:
@@ -107,18 +109,17 @@ class TrafficMonitor:
                     # update queried domains
                     # do not use copy(), simply add the new data
                     for ip in self.queried_domains.copy():
+                        if ip not in self.host_state.queried_domains:
+                            self.host_state.queried_domains[ip] = []
                         new_tuples = []
                         for t in reversed(self.queried_domains[ip]):
-                            if t not in self.host_state.queried_domains:
+                            if t not in self.host_state.queried_domains[ip]:
                                 new_tuples.append(t)
                             else:
                                 break
                         # reverse data to keep chronological order in queried domains
                         new_data = new_tuples[::-1]
-                        if ip not in self.host_state.queried_domains:
-                            self.host_state.queried_domains[ip] = new_data
-                        else:
-                            self.host_state.queried_domains[ip] += new_data
+                        self.host_state.queried_domains[ip] += new_data
 
                     # update ARP table
                     new_ARP = merge_dict(self.host_state.arp_table, self.arp_table)
@@ -145,7 +146,7 @@ class TrafficMonitor:
                 # split waiting time into small waits to check if process is still active
             else:
                 logging.info("[Monitor] No new data")
-                print("offline: {}, timestamp is {} and last update is {}. Difference={} and STOP_AFTER is {}".format(not self.host_state.online, int(time.time()), self.host_state.last_update, time.time() - self.host_state.last_update, config.STOP_AFTER_WITH_NO_INFO))
+                # print("offline: {}, timestamp is {} and last update is {}. Difference={} and STOP_AFTER is {}".format(not self.host_state.online, int(time.time()), self.host_state.last_update, time.time() - self.host_state.last_update, config.STOP_AFTER_WITH_NO_INFO))
                 if not self.host_state.online and time.time() - self.host_state.last_update > config.STOP_AFTER_WITH_NO_INFO:
                     print("[TrafficMonitor] ===== Stopping because no data has been received since {}s".format(config.STOP_AFTER_WITH_NO_INFO))
                     self.host_state.active = False
