@@ -7,10 +7,10 @@ import socket
 import requests
 import json
 import time
+import multiprocessing # to timeout socket
 
 from collections import namedtuple
 from typing import NamedTuple
-
 from src.HostState import HostState
 
 _lock = threading.Lock()
@@ -140,12 +140,26 @@ def get_device_name(ip):
         name = name[:-5]
     return name
 
+def query_dns(url):
+    try:
+        ip = socket.gethostbyname(url)
+        return ip
+    except socket.gaierror:
+        return ""
+
+
 def check_ip_blacklist(ip):
     ip_reverse = ".".join(ip.split(".")[::-1])
     url = ip_reverse + "." + "zen.spamhaus.org"
+    logging.debug("[Utils] Blacklist: query for %s (url=%s)", ip, url)
+    # result codes legend here: https://www.spamhaus.org/zen/
     try:
-        # result codes legend here: https://www.spamhaus.org/zen/
-        result_code = socket.gethostbyname(url)
-        return True
-    except socket.gaierror:
-        return False
+        dns_query_pool = multiprocessing.Pool()
+        pool_result = dns_query_pool.apply_async(query_dns, (url, ))
+        database_response = pool_result.get(5)
+    except multiprocessing.TimeoutError:
+        database_response = ""
+    if database_response != "":
+        if database_response in ["127.0.0." + str(i) for i in range(2,8)]:
+            return True
+    return False

@@ -4,14 +4,22 @@ import os
 import time
 import json
 import argparse
+import logging
 capture_folder = "evaluation/captures/"
 capture_files = {}
-capture_files["benign"] = [capture_folder + "normal/" + c for c in os.listdir(capture_folder+"normal/")]
-capture_files["malicious"] = [capture_folder + "malicious/" + c for c in os.listdir(capture_folder+"malicious/")]
+capture_files["benign"] = [capture_folder + "normal/" + c for c in os.listdir(capture_folder+"normal/") if c[-5:] == ".pcap"]
+capture_files["malicious"] = [capture_folder + "malicious/" + c for c in os.listdir(capture_folder+"malicious/") if c[-5:] == ".pcap"]
 
 
 
-def evaluate_file(label, capture_file):
+def evaluate_file(capture_file):
+    #add file name to logger
+    logger = logging.getLogger()  # Logger
+    logger_handler = logging.StreamHandler()  # Handler for the logger
+    logger.addHandler(logger_handler)
+    logger_handler.setFormatter(logging.Formatter(f'{capture_file.split("/")[-1]} %(message)s'))
+
+    label = capture_file.split("/")[-2]
     print("EVALUATION OF ", capture_file)
     t1 = time.time()
     output_file = "evaluation/results/" + label + "_" + capture_file.split("/")[-1].split(".pcap")[0] + ".json"
@@ -41,7 +49,7 @@ def evaluate_file(label, capture_file):
         n_packets = data["n_packets"]
         packets_per_second = n_packets/(t2-t1)
         print(f"\tFile: {capture_file} \
-                \n\tAlerts: {len(data['alerts'])}\
+                \n\tAlerts: {len(alert_list)}\
                 \n\tPackets: {n_packets}, Time: {t2-t1:.2f}, (Packets per second: {packets_per_second:.1f})"
             )
 
@@ -55,11 +63,10 @@ if __name__ == '__main__':
     try:
         processes = []
         starttime = time.time()
-        for label in capture_files:
-            for c in capture_files[label]:
-                p = multiprocessing.Process(target=evaluate_file, args=(label, c))
-                processes.append(p)
-                p.start()
+        for c in capture_files["benign"] + capture_files["malicious"]:
+            p = multiprocessing.Process(target=evaluate_file, args=(c,))
+            processes.append(p)
+            p.start()
     except KeyboardInterrupt:
         print("Ending")
     finally:

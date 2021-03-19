@@ -1,6 +1,7 @@
 import threading
 import logging
 import time
+import datetime
 from src.utils.utils import merge_dict, FlowKey, FlowPkt
 from src.Classifier import DomainClassifier
 from src.utils.utils import get_mac, get_device_name, get_vendor_from_mac, disable_if_offline
@@ -29,6 +30,7 @@ class TrafficMonitor:
 
         self.classifier = None
         self.last_timestamp = 0
+        self.first_timestamp = 0
         self.new_data = False #turns to true, if new data comes
 
     def start(self):
@@ -100,7 +102,6 @@ class TrafficMonitor:
                 for ip in self.arp_table.copy():
                     self.new_device(ip)
 
-                logging.debug("[Monitor] Updating data to host thread")
                 with self.host_state.lock:
                     # update passive DNS: for each domain add the new IPs (the IP list is a set)
                     for domain in self.passive_DNS:
@@ -141,6 +142,8 @@ class TrafficMonitor:
                     self.host_state.last_update = time.time()
                     self.host_state.last_timestamp = self.last_timestamp
                     self.new_data = False
+                    last_t = datetime.datetime.fromtimestamp(self.host_state.last_timestamp).strftime('%H:%M:%S')
+                    logging.debug("[Monitor] Updated data to host thread, last-t: %s (file:%s)", last_t, self.host_state.capture_file.split("/")[-1])
                 # end of lock
                 # wait until next iteration,
                 # split waiting time into small waits to check if process is still active

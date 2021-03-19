@@ -51,7 +51,7 @@ class HostState:
         self.device_names = {}
         self.last_update = time.time()
         self.last_timestamp = 0     # last timestamp of uploaded data
-
+        self.first_timestamp = 0    # first timestamp of packets
         self.blacklisted_ips = {}
 
     def reset(self):
@@ -64,6 +64,7 @@ class HostState:
         self.device_names = {}
         self.last_update = time.time()
         self.last_timestamp = 0     # last timestamp of uploaded data
+        self.first_timestamp = 0    # first timestamp of packets
         self.alert_manager.alert_list = []
         self.packet_parser.count = 0
 
@@ -96,6 +97,7 @@ class HostState:
             self.external_ip = ""
 
     def stop(self):
+        logging.debug("[Host] Stopping")
         self.ARP_spoof_thread.stop()
         self.sniffer_thread.stop()
         self.traffic_monitor.stop()
@@ -104,22 +106,24 @@ class HostState:
         print("Device names: ", self.device_names)
         # print("Blocked domains: ", self.blocked_domains)
         # print("Queried domains: ", self.queried_domains)
+        print("Queried domains: \n")
+        for ip in self.queried_domains:
+            print(ip, len(self.queried_domains[ip]))
         # print("Passive DNS: ", self.passive_DNS)
-        if len(self.alert_manager.alert_list) > 0:
-            print("Alerts: ", len(self.alert_manager.alert_list))
-            for a in self.alert_manager.alert_list[:5]:
-                print(a)
+        print("Alerts: ", len(self.alert_manager.alert_list))
+        print("Victim list", self.victim_ip_list)
+        # if len(self.alert_manager.alert_list) > 0:
+        #     for a in self.alert_manager.alert_list[:5]:
+        #         print(a)
 
     def restart_sniffer(self):
         self.sniffer_thread.stop()
         self.restart_sniffing_flag = False
-        print("Packets ",  self.packet_parser.count)
         self.reset()
         self.sniffer_thread.start()
 
     def main_loop(self):
         while self.active:
-            # pass
             if self.restart_sniffing_flag:
                 self.restart_sniffer()
 

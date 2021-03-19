@@ -14,7 +14,7 @@ class TrafficAnalyzer():
         self.iteration_time = DATABASE_UPDATE_DELAY
 
         self.thread = threading.Thread(target=self.safe_run_analyzer)
-        self.thread.daemon = False
+        self.thread.daemon = True
         self.lock = threading.Lock()
 
         self.start_time = 0
@@ -27,10 +27,10 @@ class TrafficAnalyzer():
 
 
     def stop(self):
-        logging.info("[Analyzer] Traffic analyzer stopping")
         with self.lock:
             self.active = False
-        self.analyzer_loop()
+        self.analyzer(quitting_run=True)
+        logging.info("[Analyzer] Traffic analyzer stopping")
         self.thread.join()
 
     def sleep(self, seconds):
@@ -44,15 +44,20 @@ class TrafficAnalyzer():
         Analyze NXDOMAINS in the last time window,
         sends an alert to the alert manager if there are more than threshold per time window
         """
+        # TODO: fix an error: 67000 NXDOMAINS with 2700 packets?
         pDNS = self.host_state.passive_DNS.copy()
         queried_domains = self.host_state.queried_domains.copy()
         nxdomains_counts_per_IP = {}
         for ip in queried_domains:
+            nxdomains_counts_per_IP[ip] = 0
             for pair in queried_domains[ip]:
+                timestamp = pair[0]
                 domain = pair[1]
+                if timestamp > self.stop_time:
+                    break
                 if domain in pDNS:
                     if len(pDNS[domain]) == 0:
-                        nxdomains_counts_per_IP[ip] = nxdomains_counts_per_IP.get(ip, 0) + 1
+                        nxdomains_counts_per_IP[ip] += 1
         return nxdomains_counts_per_IP
 
     def analyze_flows(self, flag):
@@ -107,10 +112,10 @@ class TrafficAnalyzer():
         """Raises alert if one host generated too much NXDOMAIN"""
         for ip in nxdomain_counts:
             if nxdomain_counts[ip] > MAX_NXDOMAIN:
-                logging.debug("ALERT: too many NXDOMAIN from host %s", ip)
                 timestamp_start = self.start_time
                 timestamp_end = self.stop_time
                 nxcount = nxdomain_counts[ip]
+                logging.debug("ALERT: %d NXDOMAIN from host %s", nxcount, ip)
                 self.host_state.alert_manager.new_alert_nxdomain(ip, timestamp_start, timestamp_end, nxcount)
 
     def detect_vertical_port_scan(self, syn_counts):
@@ -149,6 +154,7 @@ class TrafficAnalyzer():
                 timestamp_start = self.start_time
                 timestamp_end = self.stop_time
                 ip_count = len(ip_contacted[key])
+                logging.debug("ALERT: port scanning on port %s: %s IP contacted ", port_dst, ip_count)
                 self.host_state.alert_manager.new_alert_horizontal_portscan(host_IP, port_dst, timestamp_start, timestamp_end, ip_count)
 
     def detect_dos_on_port(self, syn_counts):
@@ -198,10 +204,12 @@ class TrafficAnalyzer():
 
 
 
-    def detect_alerts(self, start_time, stop_time):
-        logging.info("[Analyzer] Detecting alerts")
-        self.start_time = start_time
-        self.stop_time = stop_time
+    def detect_alerts(self, start, stop):
+        self.start_time = start
+        self.stop_time = stop
+        h1 = datetime.datetime.fromtimestamp(start).strftime('%H:%M:%S')
+        h2 = datetime.datetime.fromtimestamp(stop).strftime('%H:%M:%S')
+        logging.debug("[Analyzer] Alert detection between %s and %s", h1, h2)
         nxdomain_counts = self.count_NXDOMAIN_per_IP()
         syn_counts, contacted_ips = self.analyze_flows("S")
         domains_scores = self.get_scores_of_contacted_domains()
@@ -209,11 +217,12 @@ class TrafficAnalyzer():
         # analyze data and raise alerts if something is suspicious
         self.detect_nxdomain_alert(nxdomain_counts)
         self.detect_vertical_port_scan(syn_counts)
+        self.detect_horizontal_port_scan(syn_counts)
         self.detect_dos_on_port(syn_counts)
         self.detect_contacted_ip(contacted_ips)
 
 
-    def analyzer(self):
+    def analyzer(self, quitting_run=False):
         if self.host_state.online:
             stop_time = time.time()
             start_time = stop_time - self.TIME_WINDOW
@@ -222,19 +231,35 @@ class TrafficAnalyzer():
             logging.debug("[Analyzer] Analyzing data to detect alerts between %s and %s (window = %d)", h1, h2, self.TIME_WINDOW)
             self.detect_alerts(start_time, stop_time)
         else:
-            new_stop_time = self.host_state.last_timestamp
-            if new_stop_time > 0:
-                if self.stop_time > 0:
-                    prev_stop_time = self.stop_time
-                else:
-                    # first iteration, do only one time window, because no previous stop time is set
-                    prev_stop_time = new_stop_time - self.TIME_WINDOW
-                for start_time in range(prev_stop_time, new_stop_time, self.TIME_WINDOW):
-                    stop_time = start_time + self.TIME_WINDOW
-                    # h1 = datetime.datetime.fromtimestamp(start_time).strftime('"%m/%d/%Y, %H:%M:%S')
-                    # h2 = datetime.datetime.fromtimestamp(stop_time).strftime('"%m/%d/%Y, %H:%M:%S')
-                    # logging.debug("[Analyzer] Analyzing data to detect alerts between %s and %s (window = %d)", h1, h2, self.TIME_WINDOW)
-                    self.detect_alerts(start_time, stop_time)
+            if self.host_state.first_timestamp > 0:
+                # if some data has been uploaded
+                if self.host_state.last_timestamp - self.host_state.first_timestamp > TIME_WINDOW or quitting_run:
+                    # if there is at least one time window in all the uploaded data or if we are in the last run
+                    # in the last run, run a window no matter if incomplete
+                    if self.start_time == 0:
+                        # if it is the first ever time window, start of first timestamp, else use previous start time
+                        start_windows = self.host_state.first_timestamp
+                    else:
+                        #start where we left the last time window
+                        start_windows = self.stop_time
+                    # at this point, start windows points where the last time window ended
+                    # place stop and start there, and if there
+                    start = start_windows
+                    while start + TIME_WINDOW < self.host_state.last_timestamp:
+                        stop = start + TIME_WINDOW
+                        self.detect_alerts(start, stop)
+                        # move start to stop to check if next time window is possible
+                        start = stop
+
+                    if quitting_run:
+                        #if this is the quitting run, run from start to end, even if last_timestamp is inferior
+                        stop = start + TIME_WINDOW
+                        self.detect_alerts(start, stop)
+            logging.debug("[Analyzer] End of analyzer iteration (file %s) ", self.host_state.capture_file.split("/")[-1])
+
+
+
+
 
     def analyzer_loop(self):
         while self.active:

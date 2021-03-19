@@ -17,7 +17,7 @@ import config
 from src.utils.utils import StopProgramException
 
 logging_format = "%(asctime)s: %(message)s"
-logging.basicConfig(stream=sys.stdout, format=logging_format, level=logging.INFO, datefmt="%H:%M:%S")
+logging.basicConfig(stream=sys.stdout, format=logging_format, level=logging.DEBUG, datefmt="%H:%M:%S")
 logging.getLogger("requests").setLevel(logging.WARNING)
 logging.getLogger("urllib3").setLevel(logging.WARNING)
 
@@ -29,16 +29,27 @@ class SetEncoder(json.JSONEncoder):
         return json.JSONEncoder.default(self, obj)
 
 def export_to_file(h, output_file):
+    logging.debug("[Main] Dumping to file %s", output_file)
     data = {}
     data["n_packets"] = h.packet_parser.count
+    print(h.victim_ip_list)
+    data["victim_list"] = h.victim_ip_list
     data["alerts"] = h.alert_manager.get_list_as_dict()
     data["ARP_table"] = h.arp_table
     # data["pDNS"] = h.passive_DNS
     # data["flows"] = h.flows
     data["domain_scores"] = h.domain_scores
-    with open(output_file, "w") as f:
-        json.dump(data, f, indent=2, cls=SetEncoder)
-    print(f"[Main] Dumped data to {output_file}")
+    logging.debug("[Main] Gathered data to dump to %s", output_file)
+    try:
+        with open(output_file, "w") as f:
+            json.dump(data, f, indent=2, cls=SetEncoder)
+        print(f"[Main] Dumped data to {output_file}")
+    except Exception as e:
+        print(data)
+        print("\n\n\nCOULD NOT DUMP DATA TO JSON")
+        err_msg = 'Exception: %s\n' % e
+        err_msg += str(traceback.format_exc()) + '\n\n\n'
+        print(err_msg)
 
 
 def main(online, capture_file, output_file):
@@ -75,9 +86,9 @@ def main(online, capture_file, output_file):
     finally:
         print("[Main] ---------------------- Ending ----------------------")
         logging.info("[Main] %d packets captures", h.packet_parser.count)
+        h.stop()
         if output_file != "":
             export_to_file(h, output_file)
-        h.stop()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Options for the IoT inspection program')

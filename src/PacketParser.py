@@ -127,7 +127,7 @@ class PacketParser:
                 if pkt[sc.DNS].rcode == 3:
                     #NXDOMAIN
                     fqdn = pkt[sc.DNS].qd.qname.decode().rstrip(".")
-                    logging.debug("[Packet Parser] Domain %s does not exist", fqdn)
+                    # logging.debug("[Packet Parser] Domain %s does not exist", fqdn)
                     self.traffic_monitor.add_to_pDNS(fqdn, [])
                     self.forward_packet(pkt)
                     # add to queried domains:, querier is the destination since packet is a response
@@ -229,8 +229,8 @@ class PacketParser:
             mac_associated_IP = list_MACs[list_IPs.index(pkt[sc.Ether].src)]
             packet_IP = pkt[sc.IP].src
             if (packet_IP != mac_associated_IP) and (packet_IP != external_IP):
-                logging.warning("[PacketParser] Unknown source IP %s used by MAC %s, may be a spoofed IP", packet_IP, pkt[sc.Ether].src)
-                timestamp = pkt.time
+                # logging.warning("[PacketParser] Unknown source IP %s used by MAC %s, may be a spoofed IP", packet_IP, pkt[sc.Ether].src)
+                timestamp = int(pkt.time)
                 self.host_state.alert_manager.new_alert_IP_spoofed(mac_associated_IP, packet_IP, timestamp)
 
     def parse_packet(self, pkt):
@@ -286,7 +286,9 @@ class PacketParser:
     def prn_call(self, pkt):
         """This is the function that is called by the prn callback in Sniffer"""
         self.count += 1
+        if self.count == 1:
+            self.host_state.first_timestamp = int(pkt.time)
         if not self.host_state.online:
-            if self.count % 10000 == 0:
+            if self.count % 5000 == 0:
                 logging.info("%s: [PacketParser] %d packets", self.host_state.capture_file.split("/")[-1], self.count)
         safe_run(self.parse_packet, args=[pkt])
