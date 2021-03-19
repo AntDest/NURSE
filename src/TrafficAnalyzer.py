@@ -212,6 +212,7 @@ class TrafficAnalyzer():
         logging.debug("[Analyzer] Alert detection between %s and %s", h1, h2)
         nxdomain_counts = self.count_NXDOMAIN_per_IP()
         syn_counts, contacted_ips = self.analyze_flows("S")
+        udp_counts, contacted_ips_udp = self.analyze_flows("UDP")
         domains_scores = self.get_scores_of_contacted_domains()
 
         # analyze data and raise alerts if something is suspicious
@@ -219,6 +220,8 @@ class TrafficAnalyzer():
         self.detect_vertical_port_scan(syn_counts)
         self.detect_horizontal_port_scan(syn_counts)
         self.detect_dos_on_port(syn_counts)
+        print(udp_counts)
+        self.detect_dos_on_port(udp_counts)
         self.detect_contacted_ip(contacted_ips)
 
 

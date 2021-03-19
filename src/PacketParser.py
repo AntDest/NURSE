@@ -187,9 +187,10 @@ class PacketParser:
             port_dst=port_dst,
             protocol=protocol
         )
-        flags = ""
         if proto == sc.TCP:
             flags = pkt.sprintf('%TCP.flags%')
+        else:
+            flags = "UDP"
         pkt_attributes = FlowPkt(
             inbound=inbound,
             size=len(pkt[proto].payload),
