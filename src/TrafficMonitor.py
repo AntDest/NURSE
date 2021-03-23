@@ -16,6 +16,7 @@ class TrafficMonitor:
     def __init__(self, host_state, update_delay):
         self.host_state = host_state
         self.updater_thread = threading.Thread(target=self.safe_updater)
+        self.updater_thread.daemon = True
         self.lock = threading.Lock()
         self.active = True
         self.update_delay = update_delay
@@ -44,11 +45,11 @@ class TrafficMonitor:
         self.updater_thread.start()
 
     def stop(self):
-        logging.info("[Monitor] Traffic monitor stopping")
         self.active = False
         if self.host_state.online:
             self.classifier.delete_file()
         self.updater_thread.join()
+        logging.info("[Monitor] Traffic monitor stopping")
 
 
     def new_device_get_mac(self, ip, mac=""):
@@ -134,21 +135,19 @@ class TrafficMonitor:
 
                     # update the list of flows
                     for flow_key in self.flows.copy():
-                        if flow_key not in self.host_state.flows:
-                            self.host_state.flows[flow_key] = []
-                        self.host_state.flows[flow_key] += self.flows[flow_key]
+                        self.host_state.flows[flow_key] = self.flows[flow_key]
 
                     self.host_state.domain_scores = self.domain_scores
                     self.host_state.last_update = time.time()
                     self.host_state.last_timestamp = self.last_timestamp
                     self.new_data = False
                     last_t = datetime.datetime.fromtimestamp(self.host_state.last_timestamp).strftime('%H:%M:%S')
-                    logging.debug("[Monitor] Updated data to host thread, last-t: %s (file:%s)", last_t, self.host_state.capture_file.split("/")[-1])
+                    logging.info("[Monitor] Updated data to host thread, last-t: %s (file:%s)", last_t, self.host_state.capture_file.split("/")[-1])
                 # end of lock
                 # wait until next iteration,
                 # split waiting time into small waits to check if process is still active
             else:
-                logging.info("[Monitor] No new data")
+                logging.info("[Monitor] No new data (file: %s)", self.host_state.capture_file.split("/")[-1])
                 # print("offline: {}, timestamp is {} and last update is {}. Difference={} and STOP_AFTER is {}".format(not self.host_state.online, int(time.time()), self.host_state.last_update, time.time() - self.host_state.last_update, config.STOP_AFTER_WITH_NO_INFO))
                 if not self.host_state.online and time.time() - self.host_state.last_update > config.STOP_AFTER_WITH_NO_INFO:
                     print("[TrafficMonitor] ===== Stopping because no data has been received since {}s".format(config.STOP_AFTER_WITH_NO_INFO))

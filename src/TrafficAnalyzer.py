@@ -29,6 +29,7 @@ class TrafficAnalyzer():
     def stop(self):
         with self.lock:
             self.active = False
+        logging.info("[Analyzer] Last analyzer run")
         self.analyzer(quitting_run=True)
         logging.info("[Analyzer] Traffic analyzer stopping")
         self.thread.join()
@@ -55,9 +56,12 @@ class TrafficAnalyzer():
                 domain = pair[1]
                 if timestamp > self.stop_time:
                     break
-                if domain in pDNS:
-                    if len(pDNS[domain]) == 0:
-                        nxdomains_counts_per_IP[ip] += 1
+                elif timestamp < self.start_time:
+                    continue
+                else:
+                    if domain in pDNS:
+                        if len(pDNS[domain]) == 0:
+                            nxdomains_counts_per_IP[ip] += 1
         return nxdomains_counts_per_IP
 
     def analyze_flows(self, flag):
@@ -65,9 +69,10 @@ class TrafficAnalyzer():
         # keys are FlowKey, values are SYN counts in the time window
         flag_counts = {}
         contacted_IPs = {}
-        for flow in self.host_state.flows.copy():
+        flows = self.host_state.flows.copy()
+        for flow in flows:
             # read packets from end to beginning
-            packets = reversed(self.host_state.flows[flow])
+            packets = reversed(flows[flow])
             for p in packets:
                 if p.timestamp > self.stop_time:
                     continue
@@ -128,7 +133,6 @@ class TrafficAnalyzer():
             if key not in ports_contacted:
                 ports_contacted[key] = set()
             ports_contacted[key].add(getattr(flow, "port_dst"))
-        # print(ports_contacted)
         for key in ports_contacted:
             if len(ports_contacted[key]) > MAX_PORTS_PER_HOST:
                 logging.debug(f"ALERT: port scanning on {key}: {len(ports_contacted[key])} port contacted ", ports_contacted[key])
@@ -190,6 +194,7 @@ class TrafficAnalyzer():
                 else:
                     is_in_blacklist = blacklisted_ips[ip_dst]
                 if is_in_blacklist:
+                    logging.info("ALERT: %s has contacted %s which is blacklisted", ip_src, ip_dst)
                     self.host_state.alert_manager.new_alert_blacklisted_ip(ip_src, ip_dst, self.start_time)
 
                 # check if IP was in pDNS
@@ -209,18 +214,16 @@ class TrafficAnalyzer():
         self.stop_time = stop
         h1 = datetime.datetime.fromtimestamp(start).strftime('%H:%M:%S')
         h2 = datetime.datetime.fromtimestamp(stop).strftime('%H:%M:%S')
-        logging.debug("[Analyzer] Alert detection between %s and %s", h1, h2)
+        logging.debug("[Analyzer] %s: Alert detection between %s and %s", self.host_state.capture_file.split("/")[-1], h1, h2)
         nxdomain_counts = self.count_NXDOMAIN_per_IP()
         syn_counts, contacted_ips = self.analyze_flows("S")
         udp_counts, contacted_ips_udp = self.analyze_flows("UDP")
         domains_scores = self.get_scores_of_contacted_domains()
-
         # analyze data and raise alerts if something is suspicious
         self.detect_nxdomain_alert(nxdomain_counts)
         self.detect_vertical_port_scan(syn_counts)
         self.detect_horizontal_port_scan(syn_counts)
         self.detect_dos_on_port(syn_counts)
-        print(udp_counts)
         self.detect_dos_on_port(udp_counts)
         self.detect_contacted_ip(contacted_ips)
 

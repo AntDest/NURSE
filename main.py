@@ -17,7 +17,7 @@ import config
 from src.utils.utils import StopProgramException
 
 logging_format = "%(asctime)s: %(message)s"
-logging.basicConfig(stream=sys.stdout, format=logging_format, level=logging.DEBUG, datefmt="%H:%M:%S")
+logging.basicConfig(stream=sys.stdout, format=logging_format, level=logging.INFO, datefmt="%H:%M:%S")
 logging.getLogger("requests").setLevel(logging.WARNING)
 logging.getLogger("urllib3").setLevel(logging.WARNING)
 
@@ -31,14 +31,17 @@ class SetEncoder(json.JSONEncoder):
 def export_to_file(h, output_file):
     logging.debug("[Main] Dumping to file %s", output_file)
     data = {}
+    alerts = h.alert_manager.get_list_as_dict()
     data["n_packets"] = h.packet_parser.count
-    print(h.victim_ip_list)
+    data["n_alerts"] = len(alerts)
     data["victim_list"] = h.victim_ip_list
-    data["alerts"] = h.alert_manager.get_list_as_dict()
+    data["alerts"] = alerts
     data["ARP_table"] = h.arp_table
+    data["timestamp_start"] = h.first_timestamp
+    data["timestamp_last"] = h.last_timestamp
     # data["pDNS"] = h.passive_DNS
     # data["flows"] = h.flows
-    data["domain_scores"] = h.domain_scores
+    # data["domain_scores"] = h.domain_scores
     logging.debug("[Main] Gathered data to dump to %s", output_file)
     try:
         with open(output_file, "w") as f:
@@ -71,11 +74,7 @@ def main(online, capture_file, output_file):
         h.traffic_analyzer = TrafficAnalyzer(h)
         logging.info("[Main] Starting child threads")
         h.start()
-        if config.QUIT_AFTER_TIME > 0:
-            time.sleep(config.QUIT_AFTER_TIME)
-            print("[Main] ===== Stopping because reached QUIT_AFTER_TIME running time")
-        else:
-            h.main_loop()
+        h.main_loop()
 
     except (KeyboardInterrupt, StopProgramException):
         print("") # breakline after ^C to help reading

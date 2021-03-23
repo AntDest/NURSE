@@ -3,7 +3,8 @@ import threading
 import time
 import requests
 import scapy.all as sc
-from config import CHECK_IP_URL_LIST
+from config import CHECK_IP_URL_LIST, QUIT_AFTER_TIME
+
 
 class HostState:
     """Host state that starts all threads and stores the global information"""
@@ -17,7 +18,7 @@ class HostState:
         # list of network parameters that will be useful for child threads
         self.host_ip = None
         self.host_mac = None
-        self.gateway_ip = None
+        self.gateway_ip = "192.168.1.1"
         self.external_ip = None
         self.victim_ip_list = []
         self.interface = None
@@ -72,7 +73,7 @@ class HostState:
         if not self.online and capture_file != "":
             self.capture_file = capture_file
         else:
-            self.capture_file = None
+            self.capture_file = ""
 
     def start(self):
         # TODO: watch for IP changes in the network
@@ -123,9 +124,14 @@ class HostState:
         self.sniffer_thread.start()
 
     def main_loop(self):
+        start_time = time.time()
         while self.active:
+            if QUIT_AFTER_TIME > 0 and time.time() - start_time < QUIT_AFTER_TIME:
+                self.active = False
             if self.restart_sniffing_flag:
                 self.restart_sniffer()
+        if time.time() - start_time > QUIT_AFTER_TIME:
+            print("[Main] ===== Stopping because reached QUIT_AFTER_TIME running time")
 
 
 

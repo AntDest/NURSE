@@ -150,8 +150,8 @@ class PacketParser:
             # check the queried IP if it is in the local network
             queried_ip = pkt[sc.ARP].pdst
             if ip_address(queried_ip).is_private:
-                # do not query your own device
-                if queried_ip != self.host_state.host_ip:
+                # do not query your own device and do not ad gateway to victims
+                if queried_ip != self.host_state.host_ip and queried_ip.split('.')[3] == '1':
                     self.traffic_monitor.new_device(queried_ip)
 
 
@@ -230,6 +230,9 @@ class PacketParser:
             mac_associated_IP = list_MACs[list_IPs.index(pkt[sc.Ether].src)]
             packet_IP = pkt[sc.IP].src
             if (packet_IP != mac_associated_IP) and (packet_IP != external_IP):
+                if mac_associated_IP.split(".")[3] == "1":
+                    # do not consider spoofs for the gateway
+                    return
                 # logging.warning("[PacketParser] Unknown source IP %s used by MAC %s, may be a spoofed IP", packet_IP, pkt[sc.Ether].src)
                 timestamp = int(pkt.time)
                 self.host_state.alert_manager.new_alert_IP_spoofed(mac_associated_IP, packet_IP, timestamp)
@@ -290,6 +293,6 @@ class PacketParser:
         if self.count == 1:
             self.host_state.first_timestamp = int(pkt.time)
         if not self.host_state.online:
-            if self.count % 5000 == 0:
+            if self.count % 25000 == 0:
                 logging.info("%s: [PacketParser] %d packets", self.host_state.capture_file.split("/")[-1], self.count)
         safe_run(self.parse_packet, args=[pkt])
