@@ -151,7 +151,7 @@ class PacketParser:
             queried_ip = pkt[sc.ARP].pdst
             if ip_address(queried_ip).is_private:
                 # do not query your own device and do not ad gateway to victims
-                if queried_ip != self.host_state.host_ip and queried_ip.split('.')[3] == '1':
+                if queried_ip != self.host_state.host_ip and queried_ip.split('.')[3] != '1':
                     self.traffic_monitor.new_device(queried_ip)
 
 
