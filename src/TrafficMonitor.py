@@ -81,6 +81,8 @@ class TrafficMonitor:
     def new_device(self, ip, mac=""):
         """Gathers info and adds the device to ARP table and device names"""
         if ip != "0.0.0.0":
+            if ip not in self.arp_table:
+                logging.info("[Monitor] New device: IP=%s", ip)
             mac = self.new_device_get_mac(ip, mac)
             self.new_device_get_name(ip, mac)
             self.new_data = True
