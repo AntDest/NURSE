@@ -78,11 +78,19 @@ class TrafficAnalyzer():
                     continue
                 elif p.timestamp < self.start_time:
                     break
-                if p.flags == flag:
-                    flag_counts[flow] = flag_counts.get(flow, 0) + 1
-                    ip_src = getattr(flow,"IP_src")
-                    ip_dst = getattr(flow,"IP_dst")
-                    contacted_IPs.setdefault(ip_src, set()).add(ip_dst)
+                if flag == "S":
+                    # do not count SA as SYN packets
+                    if "S" in p.flags and "A" not in p.flags:
+                        flag_counts[flow] = flag_counts.get(flow, 0) + 1
+                        ip_src = getattr(flow,"IP_src")
+                        ip_dst = getattr(flow,"IP_dst")
+                        contacted_IPs.setdefault(ip_src, set()).add(ip_dst)
+                else:
+                    if p.flags == flag:
+                        flag_counts[flow] = flag_counts.get(flow, 0) + 1
+                        ip_src = getattr(flow,"IP_src")
+                        ip_dst = getattr(flow,"IP_dst")
+                        contacted_IPs.setdefault(ip_src, set()).add(ip_dst)
         return flag_counts, contacted_IPs
 
     def get_scores_of_contacted_domains(self):
