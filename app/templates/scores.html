@@ -13,9 +13,9 @@
     <p>
         Use the following list to filter content by device:
     </p>
-    
+
     <ul id="device_filter_list">
-        
+
     </ul>
 
     <table id="domain_list" style="width:100%">
@@ -35,7 +35,7 @@
         </tbody>
     </table>
     </ul>
-    
+
     <script src="{{ url_for('static',filename='scripts/filter.js') }}"></script>
     <script>
         var list_devices = {{data.list_devices | tojson}};

@@ -1,10 +1,11 @@
 import time
 import logging
-from flask import render_template
+from flask import render_template, jsonify
 from flask import request
 from app import app
 from src.utils.utils import is_IPv4
-
+from ipaddress import ip_address
+from app.utils import CONVERT_ISO_3166_2_to_1
 WEBAPP_CONTEXT = {
     "host_state": None
 }
@@ -36,7 +37,7 @@ def domain_list():
         domain_scores = hs.domain_scores.copy()
         queried_domains = hs.queried_domains.copy()
         last_update = hs.last_update
-    
+
     domain_table = []
     list_devices = []
     for ip in queried_domains:
@@ -107,3 +108,59 @@ def alerts():
         d["timestamp"] = a.timestamp
         data["alerts"].append(d)
     return render_template("alerts.html", data=data)
+
+
+import requests
+import json
+def get_country(ip):
+    r = requests.get("http://ip-api.com/json/" + ip)
+    ip_data = json.loads(r.text)
+    return ip_data.get("countryCode", "")
+
+
+
+@app.route("/country_traffic")
+def get_traffic_map():
+    hs = get_host_state()
+    with hs.lock:
+        flows = hs.flows
+        victim_ip_list = hs.victim_ip_list
+
+    victims_to_dest_data_size = {}
+    for flow in flows:
+        ip_src = getattr(flow,"IP_src")
+        ip_dst = getattr(flow,"IP_dst")
+        if ip_address(ip_dst).is_private:
+            continue
+        if ip_src in victim_ip_list:
+            if ip_src not in victims_to_dest_data_size:
+                victims_to_dest_data_size[ip_src] = {}
+            packets_total_size = sum([p.size for p in flows[flow]])
+            if packets_total_size > 0:
+                victims_to_dest_data_size[ip_src][ip_dst] = victims_to_dest_data_size[ip_src].get(ip_dst, 0) + packets_total_size
+
+    victim_to_countries = {}
+    for ip_src in victims_to_dest_data_size:
+        victim_to_countries[ip_src] = {}
+        for ip in victims_to_dest_data_size[ip_src]:
+            country = get_country(ip)
+            if country != "":
+                victim_to_countries[ip_src][country] = victim_to_countries[ip_src].get(country, 0) + victims_to_dest_data_size[ip_src][ip]
+
+    csv_string = 'ip,country,count\n'
+    for ip in victim_to_countries:
+        for country in victim_to_countries[ip]:
+            country_code = CONVERT_ISO_3166_2_to_1.get(country, country)
+            line = f"{ip},{country_code},{victim_to_countries[ip][country]}\n"
+            csv_string += line
+    print(csv_string)
+    return csv_string
+
+@app.route("/map")
+def map_route():
+    hs = get_host_state()
+    with hs.lock:
+        last_update = hs.last_update
+    data = {}
+    data["last_update"] = last_update
+    return(render_template("map.html", data=data))
