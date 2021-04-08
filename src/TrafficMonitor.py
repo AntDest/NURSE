@@ -70,7 +70,7 @@ class TrafficMonitor:
         #obtain device name
         if mac != "" and mac not in self.device_names:
             if self.host_state.online:
-                name = get_device_name(ip)
+                name = get_device_name(ip, self.host_state.gateway_ip)
             else:
                 name = "-"
             manufacturer = get_vendor_from_mac(mac)

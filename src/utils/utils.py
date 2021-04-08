@@ -130,12 +130,18 @@ def get_mac(ip_address):
     return None
 
 
-def get_device_name(ip):
+def get_device_name(ip, gateway_ip):
     try:
         name = socket.gethostbyaddr(ip)[0]
     except:
-        name = ""
+        try:
+            ip_reverse = ".".join(ip.split('.')[::-1])
+            dns_response = sc.sr1(sc.IP(dst=gateway_ip)/sc.UDP() / sc.DNS(rd=1, qd=sc.DNSQR(qname=ip_reverse + ".in-addr.arpa", qtype='PTR')), verbose=0)
+            name = dns_response[sc.DNS].an[0].rdata.decode()
+        except:
+            name = ""
     # strip the ".home suffix"
+    name = name.rstrip(".")
     if name[-5:] == ".home":
         name = name[:-5]
     return name
