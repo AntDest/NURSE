@@ -74,6 +74,7 @@ class TrafficAnalyzer():
             # read packets from end to beginning
             packets = reversed(flows[flow])
             for p in packets:
+                if p.inbound: continue
                 if p.timestamp > self.stop_time:
                     continue
                 elif p.timestamp < self.start_time:
