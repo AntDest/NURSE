@@ -45,7 +45,7 @@ class AlertManager():
 
     def new_alert_no_dns(self, host_IP, ip_dst, timestamp):
         a = AlertNoDNS(host_IP, ip_dst, timestamp)
-        key = f"AlertNoDNS:{host_IP}:{ip_dst}:{timestamp}"
+        key = f"AlertNoDNS:{host_IP}:{ip_dst}"
         self.add_to_alert_list(a, key)
 
     def new_alert_blacklisted_ip(self, ip_src, ip_dst, timestamp):
@@ -54,7 +54,6 @@ class AlertManager():
         self.add_to_alert_list(a, key)
 
     def get_list_as_dict(self):
-        print("Getting list of alerts")
         dict_list = []
         for i, a in enumerate(self.alert_list):
             alert_dict = {}
