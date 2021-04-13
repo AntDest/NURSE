@@ -61,16 +61,19 @@ if __name__ == '__main__':
         for f_result in os.listdir("evaluation/results/"):
             os.remove("evaluation/results/" + f_result)
     try:
-        processes = []
+        pool = multiprocessing.Pool(4)
         starttime = time.time()
-        for c in capture_files["benign"] + capture_files["malicious"]:
-            p = multiprocessing.Process(target=evaluate_file, args=(c,))
-            processes.append(p)
-            p.start()
+        # processes = []
+        # for c in capture_files["benign"] + capture_files["malicious"]:
+            # p = multiprocessing.Process(target=evaluate_file, args=(c,))
+            # processes.append(p)
+            # p.start()
+        pool.map(evaluate_file, capture_files["benign"] + capture_files["malicious"])
+
     except KeyboardInterrupt:
         print("Ending")
     finally:
-        for process in processes:
-            process.join()
-
+        # for process in processes:
+            # process.join()
+        pass
     print('The evaluation took {} seconds'.format(time.time() - starttime))
