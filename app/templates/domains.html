@@ -20,16 +20,20 @@
 
     <table id="domain_list" style="width:100%">
         <thead>
-            <th>Device</th>
+            <th>Device name</th>
             <th>Domain</th>
+            <th>Sent</th>
+            <th>Received</th>
             <th>Score</th>
         </thead>
         <tbody>
-            {% for line in data.domain_table %}
+            {% for line in data.table_domains %}
             <tr>
-                <td>{{ line["device"] }}</td>
+                <td>{{ line["device_name"] }}</td>
                 <td>{{ line["domain"] }}</td>
-                <td>{{ '%0.2f'| format(line["score"]) }}</td>
+                <td>{{ line["sent_bytes"] }}</td>
+                <td>{{ line["received_bytes"] }}</td>
+                <td>{{ line["score"] }}</td>
             </tr>
             {% endfor %}
         </tbody>

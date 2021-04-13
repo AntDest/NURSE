@@ -3,9 +3,10 @@ import logging
 from flask import render_template, jsonify
 from flask import request
 from app import app
-from src.utils.utils import is_IPv4
+from src.utils.utils import is_IPv4, count_total_bytes_in_flow
 from ipaddress import ip_address
-from app.utils import CONVERT_ISO_3166_2_to_1
+from app.utils_data import CONVERT_ISO_3166_2_to_1
+from app.utils import humanbytes
 WEBAPP_CONTEXT = {
     "host_state": None
 }
@@ -30,39 +31,6 @@ def timestamp_to_date(t):
 
 
 @app.route('/')
-@app.route('/domains')
-def domain_list():
-    hs = get_host_state()
-    with hs.lock:
-        domain_scores = hs.domain_scores.copy()
-        queried_domains = hs.queried_domains.copy()
-        last_update = hs.last_update
-
-    domain_table = []
-    list_devices = []
-    for ip in queried_domains:
-        mac = hs.arp_table[ip]
-        device_name = hs.device_names.get(mac, ("",""))[0]
-        if device_name != "":
-            device_name = ip
-        list_devices.append(device_name)
-        for timestamp, domain in queried_domains[ip]:
-            score =  domain_scores.get(domain,0)
-            d = {
-                "timestamp": timestamp,
-                "device": device_name,
-                "domain": domain,
-                "score": score
-            }
-            domain_table.append(d)
-    data = {
-        "list_devices": list_devices,
-        "domain_table": domain_table,
-        "last_update": last_update,
-    }
-
-    return render_template("scores.html", data=data)
-
 @app.route("/devices")
 def device_list():
     hs = get_host_state()
@@ -164,3 +132,56 @@ def map_route():
     data = {}
     data["last_update"] = last_update
     return(render_template("map.html", data=data))
+
+@app.route("/domains")
+def domains_bytes():
+    hs = get_host_state()
+    with hs.lock:
+        last_update = hs.last_update
+        flows = hs.flows.copy()
+        domain_scores = hs.domain_scores.copy()
+        queried_domains = hs.queried_domains.copy()
+        arp_table = hs.arp_table.copy()
+        device_names = hs.device_names.copy()
+    
+    #count bytes per domain
+    # keys are (device_name) values are dict with key domain and values (sent_bytes, received_bytes)
+    bytes_per_domain = {}
+    for flow in flows:
+        ip_src = getattr(flow, "IP_src")
+        ip_dst = getattr(flow, "IP_dst")
+        domain = hs.reverse_pDNS(ip_dst)
+        if domain == "unknown domain":
+            domain = ip_dst
+        flow_pkt_list = flows[flow]
+        sent_bytes, received_bytes = count_total_bytes_in_flow(flow_pkt_list)
+        if ip_src not in bytes_per_domain:
+            bytes_per_domain[ip_src] = {}
+        if domain not in bytes_per_domain[ip_src]:
+            bytes_per_domain[ip_src][domain] = (sent_bytes, received_bytes)
+        else:
+            bytes_per_domain[ip_src][domain] = (bytes_per_domain[ip_src][domain][0] + sent_bytes, bytes_per_domain[ip_src][domain][1] + received_bytes)
+    
+    table = []
+    list_devices = set()
+    for ip in bytes_per_domain:
+        for domain in bytes_per_domain[ip]:
+            line = {}
+            device_name = device_names.get(arp_table.get(ip, ""), (ip,""))[0]
+            list_devices.add(device_name)
+            line["ip"] = ip
+            line["device_name"] = device_name
+            line["domain"] = domain
+            line["sent_bytes"] = humanbytes(bytes_per_domain[ip][domain][0])
+            line["received_bytes"] = humanbytes(bytes_per_domain[ip][domain][1])
+            if domain in domain_scores:
+                line["score"] = round(domain_scores[domain],2)
+            else:
+                line["score"] = ""
+            table.append(line)
+    data = {
+        "last_update": last_update,
+        "list_devices": list(list_devices),
+        "table_domains": table
+    }
+    return render_template("domains.html", data=data)

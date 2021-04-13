@@ -12,6 +12,7 @@ import multiprocessing # to timeout socket
 from collections import namedtuple
 from typing import NamedTuple
 from src.HostState import HostState
+from config import ENABLE_BLACKLIST_QUERY
 
 _lock = threading.Lock()
 
@@ -153,7 +154,6 @@ def query_dns(url):
     except socket.gaierror:
         return ""
 
-from config import ENABLE_BLACKLIST_QUERY
 def check_ip_blacklist(ip):
     if not ENABLE_BLACKLIST_QUERY:
         return False
