@@ -1,12 +1,12 @@
 import time
 import logging
 from flask import render_template, jsonify
-from flask import request
+from flask import request, redirect
 from app import app
 from src.utils.utils import is_IPv4, count_total_bytes_in_flow
 from ipaddress import ip_address
 from app.utils_data import CONVERT_ISO_3166_2_to_1
-from app.utils import humanbytes
+from app.utils import humanbytes, validate_domain_string
 WEBAPP_CONTEXT = {
     "host_state": None
 }
@@ -143,7 +143,7 @@ def domains_bytes():
         queried_domains = hs.queried_domains.copy()
         arp_table = hs.arp_table.copy()
         device_names = hs.device_names.copy()
-    
+
     #count bytes per domain
     # keys are (device_name) values are dict with key domain and values (sent_bytes, received_bytes)
     bytes_per_domain = {}
@@ -161,7 +161,7 @@ def domains_bytes():
             bytes_per_domain[ip_src][domain] = (sent_bytes, received_bytes)
         else:
             bytes_per_domain[ip_src][domain] = (bytes_per_domain[ip_src][domain][0] + sent_bytes, bytes_per_domain[ip_src][domain][1] + received_bytes)
-    
+
     table = []
     list_devices = set()
     for ip in bytes_per_domain:
@@ -185,3 +185,27 @@ def domains_bytes():
         "table_domains": table
     }
     return render_template("domains.html", data=data)
+
+
+@app.route("/config")
+def config_route():
+    hs = get_host_state()
+    with hs.lock:
+        config_dict = hs.config.get_dict()
+    return render_template("config.html", config=config_dict)
+
+
+@app.route("/update_config", methods=["POST"])
+def update_config():
+    input_blacklist = request.form["blacklist_domains"].split("\n")
+    blacklist_domains = [domain.strip() for domain in input_blacklist if validate_domain_string(domain.strip())]
+    input_enable_ip_blacklist = (request.form["enable_ip_blacklist"] == "on")
+    input_time_window = int(request.form["time_window"])
+
+    # update the config
+    hs = get_host_state()
+    with hs.lock:
+        hs.config.set_config("BLACKLIST_DOMAINS", blacklist_domains)
+        hs.config.set_config("TIME_WINDOW", input_time_window)
+        hs.config.set_config("ENABLE_IP_BLACKLIST", input_enable_ip_blacklist)
+    return redirect("/config", code=302)

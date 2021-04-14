@@ -11,7 +11,7 @@ class Config:
     "CHECK_IP_URL_LIST":  ["https://checkip.amazonaws.com", "https://ident.me", "https://api.ipify.org"],
     # the following entries can be modified by the user in the web server
     "ENABLE_BLACKLIST_QUERY": True,
-    "BLACKLIST_DOMAINS": [],
+    "BLACKLIST_DOMAINS": ["neverssl.com", "grenoble.fr"],
     "WHITELIST_PORTS":  [80,443],
     "TIME_WINDOW":  60,
     "MAX_PORTS_PER_HOST":  30,
@@ -32,6 +32,8 @@ class Config:
     # list of services that can be used to obtain your IP
     # for thresholds, thr is level 1, level 2 is 2 times this threshold, level 3 is 3 times
 
+    def get_dict(self):
+        return self._config_dict.copy()
 
     def get_config(self, key):
         """Returns a key of the config"""

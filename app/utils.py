@@ -1,3 +1,5 @@
+from src.utils.utils_variables import VALID_CHARS
+
 def humanbytes(B):
    'Return the given bytes as a human friendly KB, MB, GB, or TB string'
    #from https://stackoverflow.com/questions/12523586/python-format-size-application-converting-b-to-kb-mb-gb-tb/63839503
@@ -17,3 +19,10 @@ def humanbytes(B):
       return '{0:.2f} GB'.format(B/GB)
    elif TB <= B:
       return '{0:.2f} TB'.format(B/TB)
+
+def validate_domain_string(text):
+   """checks that the text corresponds to a valid domain: only contains [0-9][a-z] and dots and dashes"""
+   for c in text:
+      if c not in VALID_CHARS:
+         return False
+   return True
