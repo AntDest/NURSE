@@ -12,7 +12,6 @@ import multiprocessing # to timeout socket
 from collections import namedtuple
 from typing import NamedTuple
 from src.HostState import HostState
-from config import ENABLE_BLACKLIST_QUERY
 
 _lock = threading.Lock()
 
@@ -81,6 +80,18 @@ def merge_dict(x,y):
     z = x.copy()   # start with x's keys and values
     z.update(y)    # modifies z with y's keys and values & returns None
     return z
+
+
+def count_total_bytes_in_flow(flow_pkt_list):
+    sent_bytes = 0
+    recv_bytes = 0
+
+    for pkt in flow_pkt_list:
+        if pkt.inbound:
+            sent_bytes += pkt.size
+        else:
+            recv_bytes += pkt.size
+    return sent_bytes, recv_bytes
 
 
 

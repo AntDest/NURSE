@@ -4,7 +4,6 @@ import scapy.all as sc
 
 from src.utils.utils_variables import DNS_RECORD_TYPE
 from src.utils.utils import safe_run, FlowKey, FlowPkt, disable_if_offline
-import config
 from src.utils.utils import StopProgramException
 
 class PacketParser:
@@ -12,7 +11,6 @@ class PacketParser:
         self.host_state = host_state
         self.traffic_monitor = traffic_monitor
         self._victim_list = self.host_state.victim_ip_list
-        self.blacklist = self.host_state.blacklist_domains
         self.count = 0
 
     def is_in_blacklist(self, domain):
@@ -20,7 +18,8 @@ class PacketParser:
         Returns True if the fully qualified domain is in the blacklist
         Note that the blacklist can be used as wilcards: \"facebook.com\" can block \"analytics.facebook.com\n
         """
-        for black_domain in self.blacklist:
+        blacklist = self.host_state.config.get_config("BLACKLIST_DOMAINS")
+        for black_domain in blacklist:
             # get the level of the blacklisted domain, and extract same level out of given domain
             black_domain_level = black_domain.count(".") + 1
             domain_same_level = ".".join(domain.split(".")[-black_domain_level:])

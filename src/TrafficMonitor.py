@@ -6,7 +6,6 @@ from src.utils.utils import merge_dict, FlowKey, FlowPkt
 from src.Classifier import DomainClassifier
 from src.utils.utils import get_mac, get_device_name, get_vendor_from_mac, disable_if_offline
 from src.utils.utils import StopProgramException, restart_on_error
-import config
 
 class TrafficMonitor:
     """
@@ -33,6 +32,7 @@ class TrafficMonitor:
         self.last_timestamp = 0
         self.first_timestamp = 0
         self.new_data = False #turns to true, if new data comes
+        self.STOP_AFTER_WITH_NO_INFO = self.host_state.config.get_config("STOP_AFTER_WITH_NO_INFO")
 
     def start(self):
         if self.classifier is None:
@@ -144,15 +144,14 @@ class TrafficMonitor:
                     self.host_state.last_timestamp = self.last_timestamp
                     self.new_data = False
                     last_t = datetime.datetime.fromtimestamp(self.host_state.last_timestamp).strftime('%H:%M:%S')
-                    logging.info("[Monitor] Updated data to host thread, last-t: %s (file:%s)", last_t, self.host_state.capture_file.split("/")[-1])
+                    logging.debug("[Monitor] Updated data to host thread, last-t: %s (source:%s)", last_t, self.host_state.capture_file.split("/")[-1])
                 # end of lock
                 # wait until next iteration,
                 # split waiting time into small waits to check if process is still active
             else:
-                logging.info("[Monitor] No new data (file: %s)", self.host_state.capture_file.split("/")[-1])
-                # print("offline: {}, timestamp is {} and last update is {}. Difference={} and STOP_AFTER is {}".format(not self.host_state.online, int(time.time()), self.host_state.last_update, time.time() - self.host_state.last_update, config.STOP_AFTER_WITH_NO_INFO))
-                if not self.host_state.online and time.time() - self.host_state.last_update > config.STOP_AFTER_WITH_NO_INFO:
-                    print("[TrafficMonitor] ===== Stopping because no data has been received since {}s".format(config.STOP_AFTER_WITH_NO_INFO))
+                logging.debug("[Monitor] No new data (source: %s)", self.host_state.capture_file.split("/")[-1])
+                if not self.host_state.online and time.time() - self.host_state.last_update > self.STOP_AFTER_WITH_NO_INFO:
+                    print("[TrafficMonitor] ===== Stopping because no data has been received since {}s".format(self.STOP_AFTER_WITH_NO_INFO))
                     self.host_state.active = False
             self.sleep(self.update_delay)
 

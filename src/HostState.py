@@ -3,7 +3,7 @@ import threading
 import time
 import requests
 import scapy.all as sc
-from config import CHECK_IP_URL_LIST, QUIT_AFTER_TIME
+from src.Config import Config
 
 
 class HostState:
@@ -14,6 +14,9 @@ class HostState:
         self.active = True
 
         self.restart_sniffing_flag = False
+
+        # Config instace, used by all for the configuration reference
+        self.config = Config()
 
         # list of network parameters that will be useful for child threads
         self.host_ip = None
@@ -73,7 +76,7 @@ class HostState:
         if not self.online and capture_file != "":
             self.capture_file = capture_file
         else:
-            self.capture_file = ""
+            self.capture_file = "live"
 
     def start(self):
         # TODO: watch for IP changes in the network
@@ -125,6 +128,7 @@ class HostState:
 
     def main_loop(self):
         start_time = time.time()
+        QUIT_AFTER_TIME = self.config.get_config("QUIT_AFTER_TIME")
         while self.active:
             if QUIT_AFTER_TIME > 0 and time.time() - start_time < QUIT_AFTER_TIME:
                 self.active = False
@@ -140,6 +144,7 @@ class HostState:
         # query an API for the exernal IP
         external_ip = None
         while external_ip is None:
+            CHECK_IP_URL_LIST = self.config.get_config("CHECK_IP_URL_LIST")
             for CHECK_IP_URL in CHECK_IP_URL_LIST:
                 r = requests.get(CHECK_IP_URL)
                 if r.status_code == 200:

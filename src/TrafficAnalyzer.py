@@ -3,15 +3,13 @@ import logging
 import time
 import datetime
 from src.utils.utils import restart_on_error, check_ip_blacklist
-from config import TIME_WINDOW, MAX_CONNECTIONS_PER_PORT, MAX_NXDOMAIN, MAX_PORTS_PER_HOST, MAX_IP_PER_PORT, WHITELIST_PORTS, DATABASE_UPDATE_DELAY, DOMAIN_SCORE_THRESHOLD, MAX_DOMAIN_COUNT, ENABLE_BLACKLIST_QUERY
 
 class TrafficAnalyzer():
     """Parses the data obtained from Traffic Monitor and sent to HostState, detects anomalous behavior over time"""
     def __init__(self, host_state):
         self.host_state = host_state
         self.active = False
-        self.TIME_WINDOW = TIME_WINDOW
-        self.iteration_time = DATABASE_UPDATE_DELAY
+        self.TIME_WINDOW = self.host_state.config.get_config("TIME_WINDOW")
 
         self.thread = threading.Thread(target=self.safe_run_analyzer)
         self.thread.daemon = True
@@ -114,23 +112,25 @@ class TrafficAnalyzer():
                         if domain in domain_scores:
                             scores_per_IP[ip].append(domain_scores[domain])
 
+        DOMAIN_SCORE_THRESHOLD = self.host_state.config.get_config("DOMAIN_SCORE_THRESHOLD")
         for ip in scores_per_IP:
             bad_scores = [s for s in scores_per_IP[ip] if s > DOMAIN_SCORE_THRESHOLD]
             bad_scores_count = len(bad_scores)
-            if bad_scores_count > MAX_DOMAIN_COUNT:
+            if bad_scores_count > self.host_state.config.get_config("MAX_DOMAIN_COUNT"):
                 self.host_state.alert_manager.new_alert_domains(ip, self.start_time, self.stop_time, bad_scores_count, DOMAIN_SCORE_THRESHOLD)
         return scores_per_IP
 
 
     def detect_nxdomain_alert(self, nxdomain_counts):
         """Raises alert if one host generated too much NXDOMAIN"""
+        threshold = self.host_state.config.get_config("MAX_NXDOMAIN")
         for ip in nxdomain_counts:
-            if nxdomain_counts[ip] > MAX_NXDOMAIN:
+            if nxdomain_counts[ip] > threshold:
                 timestamp_start = self.start_time
                 timestamp_end = self.stop_time
                 nxcount = nxdomain_counts[ip]
                 logging.debug("ALERT: %d NXDOMAIN from host %s", nxcount, ip)
-                self.host_state.alert_manager.new_alert_nxdomain(ip, timestamp_start, timestamp_end, nxcount)
+                self.host_state.alert_manager.new_alert_nxdomain(ip, timestamp_start, timestamp_end, nxcount, threshold)
 
     def detect_vertical_port_scan(self, syn_counts):
         """
@@ -143,7 +143,7 @@ class TrafficAnalyzer():
                 ports_contacted[key] = set()
             ports_contacted[key].add(getattr(flow, "port_dst"))
         for key in ports_contacted:
-            if len(ports_contacted[key]) > MAX_PORTS_PER_HOST:
+            if len(ports_contacted[key]) > self.host_state.config.get_config("MAX_PORTS_PER_HOST"):
                 logging.debug(f"ALERT: port scanning on {key}: {len(ports_contacted[key])} port contacted ", ports_contacted[key])
                 host_IP = key[0]
                 target_IP = key[1]
@@ -161,7 +161,7 @@ class TrafficAnalyzer():
                 ip_contacted[key] = set()
             ip_contacted[key].add(getattr(flow, "IP_dst"))
         for key in ip_contacted:
-            if key[1] not in WHITELIST_PORTS and len(ip_contacted[key]) > MAX_IP_PER_PORT:
+            if key[1] not in self.host_state.config.get_config("WHITELIST_PORTS") and len(ip_contacted[key]) > self.host_state.config.get_config("MAX_IP_PER_PORT"):
                 host_IP = key[0]
                 port_dst = key[1]
                 timestamp_start = self.start_time
@@ -177,8 +177,9 @@ class TrafficAnalyzer():
         for flow in syn_counts:
             key = (getattr(flow,"IP_src"), getattr(flow,"IP_dst"), getattr(flow, "port_dst"))
             syn_on_port[key] = syn_on_port.get(key, 0) + syn_counts[flow]
+        threshold = self.host_state.config.get_config("MAX_CONNECTIONS_PER_PORT")
         for key in syn_on_port:
-            if syn_on_port[key] > MAX_CONNECTIONS_PER_PORT:
+            if syn_on_port[key] > threshold:
                 host_IP = key[0]
                 target_IP = key[1]
                 domain = self.host_state.reverse_pDNS(target_IP)
@@ -186,7 +187,8 @@ class TrafficAnalyzer():
                 timestamp_start = self.start_time
                 timestamp_end = self.stop_time
                 conn_count = syn_on_port[key]
-                self.host_state.alert_manager.new_alert_dos(host_IP, target_IP, timestamp_start, timestamp_end, conn_count)
+                threshold
+                self.host_state.alert_manager.new_alert_dos(host_IP, target_IP, timestamp_start, timestamp_end, conn_count, threshold)
 
 
     def detect_contacted_ip(self, contacted_ips):
@@ -198,7 +200,7 @@ class TrafficAnalyzer():
             for ip_dst in contacted_ips[ip_src]:
                 # check if IP is blacklisted
                 if ip_dst not in blacklisted_ips:
-                    if ENABLE_BLACKLIST_QUERY:
+                    if self.host_state.config.get_config("ENABLE_BLACKLIST_QUERY"):
                         is_in_blacklist = check_ip_blacklist(ip_dst)
                     else:
                         is_in_blacklist = False
@@ -206,7 +208,7 @@ class TrafficAnalyzer():
                 else:
                     is_in_blacklist = blacklisted_ips[ip_dst]
                 if is_in_blacklist:
-                    logging.info("ALERT: %s has contacted %s which is blacklisted", ip_src, ip_dst)
+                    logging.debug("ALERT: %s has contacted %s which is blacklisted", ip_src, ip_dst)
                     self.host_state.alert_manager.new_alert_blacklisted_ip(ip_src, ip_dst, self.start_time)
 
                 # check if IP was in pDNS
@@ -241,6 +243,7 @@ class TrafficAnalyzer():
 
 
     def analyzer(self, quitting_run=False):
+        self.TIME_WINDOW = self.host_state.config.get_config("TIME_WINDOW")
         if self.host_state.online:
             stop_time = time.time()
             start_time = stop_time - self.TIME_WINDOW
@@ -251,7 +254,7 @@ class TrafficAnalyzer():
         else:
             if self.host_state.first_timestamp > 0:
                 # if some data has been uploaded
-                if self.host_state.last_timestamp - self.host_state.first_timestamp > TIME_WINDOW or quitting_run:
+                if self.host_state.last_timestamp - self.host_state.first_timestamp > self.TIME_WINDOW or quitting_run:
                     # if there is at least one time window in all the uploaded data or if we are in the last run
                     # in the last run, run a window no matter if incomplete
                     if self.start_time == 0:
@@ -263,15 +266,15 @@ class TrafficAnalyzer():
                     # at this point, start windows points where the last time window ended
                     # place stop and start there, and if there
                     start = start_windows
-                    while start + TIME_WINDOW < self.host_state.last_timestamp:
-                        stop = start + TIME_WINDOW
+                    while start + self.TIME_WINDOW < self.host_state.last_timestamp:
+                        stop = start + self.TIME_WINDOW
                         self.detect_alerts(start, stop)
                         # move start to stop to check if next time window is possible
                         start = stop
 
                     if quitting_run:
                         #if this is the quitting run, run from start to end, even if last_timestamp is inferior
-                        stop = start + TIME_WINDOW
+                        stop = start + self.TIME_WINDOW
                         self.detect_alerts(start, stop)
             logging.debug("[Analyzer] End of analyzer iteration (file %s) ", self.host_state.capture_file.split("/")[-1])
 
@@ -282,7 +285,8 @@ class TrafficAnalyzer():
     def analyzer_loop(self):
         while self.active:
             self.analyzer()
-            self.sleep(self.iteration_time)
+            iteration_time = self.host_state.config.get_config("DATABASE_UPDATE_DELAY")
+            self.sleep(iteration_time)
 
     def safe_run_analyzer(self):
         restart_on_error(self.analyzer_loop)

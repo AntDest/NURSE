@@ -2,7 +2,7 @@ import threading
 import logging
 import time
 import scapy.all as sc
-from config import QUIT_AFTER_PACKETS, DATABASE_UPDATE_DELAY
+
 class Sniffer:
     def __init__(self, host_state, packet_parser):
         self.host_state = host_state
@@ -11,9 +11,11 @@ class Sniffer:
         self.packet_parser = packet_parser
         self.filter = lambda p: (p.haslayer(sc.IP) or p.haslayer(sc.ARP))
         self._thread = None
+        self.QUIT_AFTER_PACKETS = self.host_state.config.get_config("QUIT_AFTER_PACKETS")
+        self.DATABASE_UPDATE_DELAY = self.host_state.config.get_config("QUIT_AFTER_PACKETS")
 
     def stop_filter(self, count):
-        if QUIT_AFTER_PACKETS > 0 and count >= QUIT_AFTER_PACKETS:
+        if self.QUIT_AFTER_PACKETS > 0 and count >= self.QUIT_AFTER_PACKETS:
             # leave some time for data to be updated and analyzed
             time.sleep(2*DATABASE_UPDATE_DELAY)
             # tell the host state to terminate

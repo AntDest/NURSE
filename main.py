@@ -13,7 +13,6 @@ from src.TrafficMonitor import TrafficMonitor
 from src.Server import Server
 from src.AlertManager import AlertManager
 from src.TrafficAnalyzer import TrafficAnalyzer
-import config
 from src.utils.utils import StopProgramException
 
 logging_format = "%(asctime)s: %(message)s"
@@ -60,13 +59,11 @@ def main(online, capture_file, output_file):
     h = HostState(online)
     h.set_capture_file(capture_file)
     try:
-        h.blacklist_domains = config.BLACKLIST_DOMAINS
-        h.victim_ip_list = config.IP_VICTIMS
 
         #initiate all classes of other threads and link them to the host
         logging.info("[Main] Initializing child threads")
         h.ARP_spoof_thread = ARP_spoofer(h)
-        h.traffic_monitor = TrafficMonitor(h, config.DATABASE_UPDATE_DELAY)
+        h.traffic_monitor = TrafficMonitor(h, h.config.get_config("DATABASE_UPDATE_DELAY"))
         h.packet_parser = PacketParser(h, h.traffic_monitor)
         h.sniffer_thread = Sniffer(h, h.packet_parser)
         h.server_thread = Server(h)

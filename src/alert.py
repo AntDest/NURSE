@@ -1,5 +1,4 @@
 import datetime
-from config import MAX_CONNECTIONS_PER_PORT, MAX_NXDOMAIN
 class Alert():
     # severity out of 3
     severity = 0
@@ -26,8 +25,8 @@ class AlertIPSpoofed(Alert):
 
 class AlertNXDOMAIN(Alert):
     name = "NXDOMAIN rate alert"
-    def __init__(self, host_IP, timestamp_start, timestamp_end, nx_count):
-        severity = min(5, nx_count // MAX_NXDOMAIN)
+    def __init__(self, host_IP, timestamp_start, timestamp_end, nx_count, threshold):
+        severity = min(5, nx_count // threshold)
         self.timestamp = timestamp_start
         d_start = datetime.datetime.fromtimestamp(timestamp_start)
         d_end = datetime.datetime.fromtimestamp(timestamp_end)
@@ -60,8 +59,8 @@ class AlertHorizPortScanning(Alert):
 
 class AlertDoS(Alert):
     name = "DoS alert"
-    def __init__(self, host_IP, target_IP, timestamp_start, timestamp_end, connection_count):
-        severity = min(5, connection_count//MAX_CONNECTIONS_PER_PORT)
+    def __init__(self, host_IP, target_IP, timestamp_start, timestamp_end, connection_count, threshold):
+        severity = min(5, connection_count//threshold)
         self.target_IP = target_IP
         self.timestamp = timestamp_start
         d_start = datetime.datetime.fromtimestamp(timestamp_start)
