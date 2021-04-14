@@ -3,7 +3,7 @@ import logging
 import time
 import datetime
 from src.utils.utils import restart_on_error, check_ip_blacklist
-from config import TIME_WINDOW, MAX_CONNECTIONS_PER_PORT, MAX_NXDOMAIN, MAX_PORTS_PER_HOST, MAX_IP_PER_PORT, WHITELIST_PORTS, DATABASE_UPDATE_DELAY, DOMAIN_SCORE_THRESHOLD, MAX_DOMAIN_COUNT
+from config import TIME_WINDOW, MAX_CONNECTIONS_PER_PORT, MAX_NXDOMAIN, MAX_PORTS_PER_HOST, MAX_IP_PER_PORT, WHITELIST_PORTS, DATABASE_UPDATE_DELAY, DOMAIN_SCORE_THRESHOLD, MAX_DOMAIN_COUNT, ENABLE_BLACKLIST_QUERY
 
 class TrafficAnalyzer():
     """Parses the data obtained from Traffic Monitor and sent to HostState, detects anomalous behavior over time"""
@@ -198,7 +198,10 @@ class TrafficAnalyzer():
             for ip_dst in contacted_ips[ip_src]:
                 # check if IP is blacklisted
                 if ip_dst not in blacklisted_ips:
-                    is_in_blacklist = check_ip_blacklist(ip_dst)
+                    if ENABLE_BLACKLIST_QUERY:
+                        is_in_blacklist = check_ip_blacklist(ip_dst)
+                    else:
+                        is_in_blacklist = False
                     self.host_state.blacklisted_ips[ip_dst] = is_in_blacklist
                 else:
                     is_in_blacklist = blacklisted_ips[ip_dst]

@@ -155,8 +155,6 @@ def query_dns(url):
         return ""
 
 def check_ip_blacklist(ip):
-    if not ENABLE_BLACKLIST_QUERY:
-        return False
     ip_reverse = ".".join(ip.split(".")[::-1])
     url = ip_reverse + "." + "zen.spamhaus.org"
     logging.debug("[Utils] Blacklist: query for %s (url=%s)", ip, url)
