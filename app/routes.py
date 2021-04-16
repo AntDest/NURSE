@@ -3,8 +3,7 @@ import logging
 from flask import render_template, jsonify
 from flask import request, redirect
 from app import app
-from src.utils.utils import is_IPv4, count_total_bytes_in_flow
-from ipaddress import ip_address
+from src.utils.utils import is_IPv4, count_total_bytes_in_flow, IP_is_private
 from app.utils_data import CONVERT_ISO_3166_2_to_1
 from app.utils import humanbytes, validate_domain_string
 WEBAPP_CONTEXT = {
@@ -98,7 +97,7 @@ def get_traffic_map():
     for flow in flows:
         ip_src = getattr(flow,"IP_src")
         ip_dst = getattr(flow,"IP_dst")
-        if ip_address(ip_dst).is_private:
+        if IP_is_private(ip):
             continue
         if ip_src in victim_ip_list:
             if ip_src not in victims_to_dest_data_size:

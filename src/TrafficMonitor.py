@@ -4,7 +4,7 @@ import time
 import datetime
 from src.utils.utils import merge_dict, FlowKey, FlowPkt
 from src.Classifier import DomainClassifier
-from src.utils.utils import get_mac, get_device_name, get_vendor_from_mac, disable_if_offline
+from src.utils.utils import get_mac, get_device_name, get_vendor_from_mac, disable_if_offline, IP_is_private
 from src.utils.utils import StopProgramException, restart_on_error
 
 class TrafficMonitor:
@@ -61,6 +61,7 @@ class TrafficMonitor:
             if mac is None or mac == "":
                 # return and do not add this empty mac to the ARP table
                 return ""
+            logging.info("[Monitor] New device: IP=%s, MAC=%s", ip, mac)
             self.arp_table[ip] = mac
         else:
             mac = self.arp_table[ip]
@@ -80,9 +81,7 @@ class TrafficMonitor:
     # active discovery function, so disabled when offline
     def new_device(self, ip, mac=""):
         """Gathers info and adds the device to ARP table and device names"""
-        if ip != "0.0.0.0":
-            if ip not in self.arp_table:
-                logging.info("[Monitor] New device: IP=%s", ip)
+        if IP_is_private(ip) and ip != "0.0.0.0":
             mac = self.new_device_get_mac(ip, mac)
             self.new_device_get_name(ip, mac)
             self.new_data = True

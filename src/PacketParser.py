@@ -1,9 +1,8 @@
 import logging
-from ipaddress import ip_address    #to check if IP is private
 import scapy.all as sc
 
 from src.utils.utils_variables import DNS_RECORD_TYPE
-from src.utils.utils import safe_run, FlowKey, FlowPkt, disable_if_offline
+from src.utils.utils import safe_run, FlowKey, FlowPkt, disable_if_offline, IP_is_private
 from src.utils.utils import StopProgramException
 
 class PacketParser:
@@ -148,7 +147,7 @@ class PacketParser:
 
             # check the queried IP if it is in the local network
             queried_ip = pkt[sc.ARP].pdst
-            if ip_address(queried_ip).is_private:
+            if IP_is_private(queried_ip):
                 # do not query your own device and do not ad gateway to victims
                 if queried_ip != self.host_state.host_ip and queried_ip.split('.')[3] != '1':
                     self.traffic_monitor.new_device(queried_ip)
@@ -274,7 +273,7 @@ class PacketParser:
                         self.forward_packet(pkt)
                 else:
                     # not a victim, but could be a new device?
-                    if ip_address(pkt[sc.IP].src).is_private:
+                    if IP_is_private(pkt[sc.IP].src):
                         self.traffic_monitor.new_device(pkt[sc.IP].src)
             else:
                 # non IP packets

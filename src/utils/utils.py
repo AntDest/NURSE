@@ -8,6 +8,7 @@ import requests
 import json
 import time
 import multiprocessing # to timeout socket
+from struct import unpack
 
 from collections import namedtuple
 from typing import NamedTuple
@@ -51,6 +52,23 @@ def is_IPv4(ip_string):
         if int(d) > 255:
             return False
     return True
+
+def IP_is_private(ip):
+    """
+    Checks whether the IP is private
+    from https://stackoverflow.com/questions/691045/how-do-you-determine-if-an-ip-address-is-private-in-python
+    """
+    f = unpack('!I',socket.inet_pton(socket.AF_INET,ip))[0]
+    private = (
+        [ 2130706432, 4278190080 ], # 127.0.0.0,   255.0.0.0   http://tools.ietf.org/html/rfc3330
+        [ 3232235520, 4294901760 ], # 192.168.0.0, 255.255.0.0 http://tools.ietf.org/html/rfc1918
+        [ 2886729728, 4293918720 ], # 172.16.0.0,  255.240.0.0 http://tools.ietf.org/html/rfc1918
+        [ 167772160,  4278190080 ], # 10.0.0.0,    255.0.0.0   http://tools.ietf.org/html/rfc1918
+    )
+    for net in private:
+        if (f & net[1]) == net[0]:
+            return True
+    return False
 
 
 def get_vendor_from_mac(mac):
