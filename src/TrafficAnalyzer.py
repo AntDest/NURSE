@@ -187,9 +187,7 @@ class TrafficAnalyzer():
                 timestamp_start = self.start_time
                 timestamp_end = self.stop_time
                 conn_count = syn_on_port[key]
-                threshold
                 self.host_state.alert_manager.new_alert_dos(host_IP, target_IP, timestamp_start, timestamp_end, conn_count, threshold)
-
 
     def detect_contacted_ip(self, contacted_ips):
         pDNS = self.host_state.passive_DNS.copy()
@@ -221,6 +219,31 @@ class TrafficAnalyzer():
                     contacted_with_no_DNS.append((ip_src,ip_dst))
                     self.host_state.alert_manager.new_alert_no_dns(ip_src, ip_dst, self.start_time)
 
+    def detect_bruteforce(self, syn_counts):
+        """Count connections with ports of potential bruteforced apps"""
+        SSH_PORTS = self.host_state.config.get_config("SSH_PORT_LIST")
+        TELNET_PORTS = self.host_state.config.get_config("TELNET_PORT_LIST")
+        TRACKED_PORTS = SSH_PORTS + TELNET_PORTS
+        connection_counts = {}
+        for flow in syn_counts:
+            ip_src = getattr(flow,"IP_src")
+            port_dst = getattr(flow, "port_dst")
+            if port_dst in SSH_PORTS:
+                protocol = "SSH"
+            elif port_dst in TELNET_PORTS:
+                protocol = "TELNET"
+            else:
+                continue
+            key = (ip_src, protocol)
+            connection_counts[key] = connection_counts.get(key, 0) + syn_counts[flow]
+
+        threshold = self.host_state.config.get_config("BRUTEFORCE_CONNECTION_THRESHOLD")
+        for key in connection_counts:
+            if connection_counts[key] > threshold:
+                ip_src = key[0]
+                protocol = key[1]
+                count = connection_counts[key]
+                self.host_state.alert_manager.new_alert_bruteforce(ip_src, count, protocol, self.start_time)
 
 
     def detect_alerts(self, start, stop):
@@ -239,8 +262,8 @@ class TrafficAnalyzer():
         self.detect_horizontal_port_scan(syn_counts)
         self.detect_dos_on_port(syn_counts)
         self.detect_dos_on_port(udp_counts)
+        self.detect_bruteforce(syn_counts)
         self.detect_contacted_ip(contacted_ips)
-
 
     def analyzer(self, quitting_run=False):
         self.TIME_WINDOW = self.host_state.config.get_config("TIME_WINDOW")

@@ -9,6 +9,8 @@ class Config:
     "QUIT_AFTER_TIME":  0,
     "QUIT_AFTER_PACKETS":  0,
     "CHECK_IP_URL_LIST":  ["https://checkip.amazonaws.com", "https://ident.me", "https://api.ipify.org"],
+    "SSH_PORT_LIST": [22],
+    "TELNET_PORT_LIST": [23],
     # the following entries can be modified by the user in the web server
     "ENABLE_BLACKLIST_QUERY": True,
     "BLACKLIST_DOMAINS": ["neverssl.com", "grenoble.fr"],
@@ -16,6 +18,7 @@ class Config:
     "TIME_WINDOW":  60,
     "MAX_PORTS_PER_HOST":  30,
     "MAX_IP_PER_PORT":  30,
+    "BRUTEFORCE_CONNECTION_THRESHOLD": 5,
     "MAX_CONNECTIONS_PER_PORT":  120,
     "MAX_NXDOMAIN":  60,
     "DOMAIN_SCORE_THRESHOLD":  5,

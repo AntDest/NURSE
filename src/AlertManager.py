@@ -33,8 +33,8 @@ class AlertManager():
         key = f"AlertHorizPortScanning:{host_IP}:{target_port}:{timestamp_start}"
         self.add_to_alert_list(a, key)
 
-    def new_alert_dos(self, host_IP, target_IP, timestamp_start, timestamp_end, connection_count):
-        a = AlertDoS(host_IP, target_IP, timestamp_start, timestamp_end, connection_count)
+    def new_alert_dos(self, host_IP, target_IP, timestamp_start, timestamp_end, connection_count, threshold):
+        a = AlertDoS(host_IP, target_IP, timestamp_start, timestamp_end, connection_count, threshold)
         key = f"AlertDoS:{host_IP}:{target_IP}:{timestamp_start}"
         self.add_to_alert_list(a, key)
 
@@ -52,6 +52,12 @@ class AlertManager():
         a = AlertBlacklist(ip_src, ip_dst, timestamp)
         key = f"AlertBlacklist:{ip_src}:{ip_dst}:{timestamp}"
         self.add_to_alert_list(a, key)
+
+    def new_alert_bruteforce(self, ip_src, count, protocol, timestamp):
+        a = AlertBruteforce(ip_src, count, protocol, timestamp)
+        key = f"AlertBruteforce:{ip_src}:{protocol}:{timestamp}"
+        self.add_to_alert_list(a, key)
+
 
     def get_list_as_dict(self):
         dict_list = []

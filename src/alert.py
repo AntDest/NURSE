@@ -95,3 +95,13 @@ class AlertBlacklist(Alert):
         date = datetime.datetime.fromtimestamp(timestamp)
         message = f"{host_IP} contacted {ip_dst} which is blacklisted, time:{date.strftime('%H:%M:%S')}"
         super().__init__(host_IP, severity, message)
+
+
+class AlertBruteforce(Alert):
+    name = "Bruteforce"
+    def __init__(self, host_IP, count, protocol, timestamp):
+        severity = 2
+        self.timestamp = timestamp
+        date = datetime.datetime.fromtimestamp(timestamp)
+        message = f"{host_IP} initiated {count} {protocol} sessions. time:{date.strftime('%H:%M:%S')}"
+        super().__init__(host_IP, severity, message)
