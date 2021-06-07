@@ -106,9 +106,9 @@ def count_total_bytes_in_flow(flow_pkt_list):
 
     for pkt in flow_pkt_list:
         if pkt.inbound:
-            sent_bytes += pkt.size
-        else:
             recv_bytes += pkt.size
+        else:
+            sent_bytes += pkt.size
     return sent_bytes, recv_bytes
 
 
