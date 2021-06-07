@@ -86,7 +86,6 @@ class PacketParser:
 
     def parse_DNS_response(self, pkt):
         """parse DNS packets to extract sld and IP list"""
-        domain_name = pkt[sc.DNS].qd.qname.decode().rstrip(".")
         response_list = []
         for x in range(pkt[sc.DNS].ancount):
             # filter to find A record
@@ -94,9 +93,10 @@ class PacketParser:
             if answer.type in DNS_RECORD_TYPE:
                 dns_type = DNS_RECORD_TYPE[answer.type]
                 if dns_type == "A" or dns_type == "AAAA":
-                    response = pkt[sc.DNS].an[x].rdata
+                    logging.debug("DNS RESPONSE %s : %s", pkt[sc.DNS].an[x].rrname, pkt[sc.DNS].an[x].rdata)
+                    response = pkt[sc.DNS].an[x].rrname.decode(), pkt[sc.DNS].an[x].rdata
                     response_list.append(response)
-        return domain_name, response_list
+        return response_list
 
 
     def parse_DNS(self, pkt):
@@ -108,18 +108,21 @@ class PacketParser:
             # check that response is not empty
             if pkt[sc.DNS].qdcount > 0 and pkt[sc.DNS].ancount > 0 and pkt.haslayer(sc.DNSRR):
                 # parse DNS response
-                fqdn, ip_list = self.parse_DNS_response(pkt)
-                # logging.debug("[Packet Parser] Domain %s, ip list %s", fqdn, ip_list)
-                # add to pDNS data
-                self.traffic_monitor.add_to_pDNS(fqdn, ip_list)
-                # add to queried domains:, querier is the destination since packet is a response
-                ip_source = pkt[sc.IP].dst
-                self.traffic_monitor.add_to_queried_domains(ip_source, fqdn, timestamp=int(pkt.time))
-                if self.is_in_blacklist(fqdn):
-                    self.spoof_DNS(pkt)
-                    self.traffic_monitor.add_to_blocked_domains(fqdn)
-                else:
-                    self.forward_packet(pkt)
+                response_list = self.parse_DNS_response(pkt)
+                for r in response_list:
+                    fqdn, ip_response = r
+                    print(fqdn, ip_response)
+                    # logging.debug("[Packet Parser] Domain %s, ip list %s", fqdn, ip_list)
+                    # add to pDNS data
+                    self.traffic_monitor.add_to_pDNS(fqdn, [ip_response])
+                    # add to queried domains:, querier is the destination since packet is a response
+                    ip_source = pkt[sc.IP].dst
+                    self.traffic_monitor.add_to_queried_domains(ip_source, fqdn, timestamp=int(pkt.time))
+                    if self.is_in_blacklist(fqdn):
+                        self.spoof_DNS(pkt)
+                        self.traffic_monitor.add_to_blocked_domains(fqdn)
+                    else:
+                        self.forward_packet(pkt)
             else:
                 #there was no response record
                 if pkt[sc.DNS].rcode == 3:
