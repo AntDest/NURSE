@@ -6,6 +6,9 @@ from app import app
 from src.utils.utils import is_IPv4, count_total_bytes_in_flow, IP_is_private
 from app.utils_data import CONVERT_ISO_3166_2_to_1
 from app.utils import humanbytes, validate_domain_string
+import requests
+import json
+
 WEBAPP_CONTEXT = {
     "host_state": None
 }
@@ -77,8 +80,6 @@ def alerts():
     return render_template("alerts.html", data=data)
 
 
-import requests
-import json
 def get_country(ip):
     r = requests.get("http://ip-api.com/json/" + ip)
     ip_data = json.loads(r.text)
@@ -198,7 +199,7 @@ def config_route():
 def update_config():
     input_blacklist = request.form["blacklist_domains"].split("\n")
     blacklist_domains = [domain.strip() for domain in input_blacklist if validate_domain_string(domain.strip())]
-    input_enable_ip_blacklist = (request.form["enable_ip_blacklist"] == "on")
+    input_enable_ip_blacklist = (request.form.get("enable_ip_blacklist", 'off') == "on")
     input_time_window = int(request.form["time_window"])
 
     # update the config
@@ -206,5 +207,5 @@ def update_config():
     with hs.lock:
         hs.config.set_config("BLACKLIST_DOMAINS", blacklist_domains)
         hs.config.set_config("TIME_WINDOW", input_time_window)
-        hs.config.set_config("ENABLE_IP_BLACKLIST", input_enable_ip_blacklist)
+        hs.config.set_config("ENABLE_BLACKLIST_QUERY", input_enable_ip_blacklist)
     return redirect("/config", code=302)
