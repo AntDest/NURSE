@@ -4,6 +4,7 @@ import logging
 import traceback
 import argparse
 import json
+import multiprocessing
 
 from src.HostState import HostState
 from src.ARP_spoofer import ARP_spoofer
@@ -87,6 +88,9 @@ def main(online, capture_file, output_file):
             export_to_file(h, output_file)
 
 if __name__ == "__main__":
+    # prepare multiprocessing for exe files
+    multiprocessing.freeze_support()
+
     parser = argparse.ArgumentParser(description='Options for the IoT inspection program')
     parser.add_argument('--offline', metavar='path', type=str, default="", help='the path to the pcap file')
     parser.add_argument('--output', metavar='path', type=str, default="", help='the path of the output file')
