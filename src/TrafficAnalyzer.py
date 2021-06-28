@@ -130,7 +130,7 @@ class TrafficAnalyzer():
                 timestamp_end = self.stop_time
                 nxcount = nxdomain_counts[ip]
                 logging.debug("ALERT: %d NXDOMAIN from host %s", nxcount, ip)
-                self.host_state.alert_manager.new_alert_nxdomain(ip, timestamp_start, timestamp_end, nxcount, threshold)
+                self.host_state.alert_manager.new_alert_nxdomain(ip, timestamp_start, timestamp_end, nxcount)
 
     def detect_vertical_port_scan(self, syn_counts):
         """
