@@ -1,6 +1,7 @@
 import logging
 import scapy.all as sc
-
+import time
+import datetime
 from src.utils.utils_variables import DNS_RECORD_TYPE
 from src.utils.utils import safe_run, FlowKey, FlowPkt, disable_if_offline, IP_is_private
 from src.utils.utils import StopProgramException
@@ -11,6 +12,7 @@ class PacketParser:
         self.traffic_monitor = traffic_monitor
         self._victim_list = self.host_state.victim_ip_list
         self.count = 0
+        self.delays = []
 
     def is_in_blacklist(self, domain):
         """
@@ -265,11 +267,11 @@ class PacketParser:
                     if sc.DHCP in pkt:
                         self.parse_DHCP(pkt)
                     if sc.TCP in pkt:
+                        self.forward_packet(pkt)
                         self.parse_TCP_UDP(pkt, protocol="TCP")
-                        self.forward_packet(pkt)
                     if sc.UDP in pkt:
-                        self.parse_TCP_UDP(pkt, protocol="UDP")
                         self.forward_packet(pkt)
+                        self.parse_TCP_UDP(pkt, protocol="UDP")
                     else: # has no known layer
                         # checking for blacklist should not be necessary since DNS is spoofed
                         # forward packet since the packet destination MAC is spoofed
@@ -296,4 +298,9 @@ class PacketParser:
         if not self.host_state.online:
             if self.count % 25000 == 0:
                 logging.info("%s: [PacketParser] %d packets", self.host_state.capture_file.split("/")[-1], self.count)
+
         safe_run(self.parse_packet, args=[pkt])
+        delay = time.time() - pkt.time
+        if self.count % 50 == 0:
+            print(self.count, "OUT," , datetime.timedelta(seconds=delay))
+        self.delays.append((time.time(), delay))

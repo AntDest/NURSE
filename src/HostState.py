@@ -119,6 +119,10 @@ class HostState:
         # if len(self.alert_manager.alert_list) > 0:
         #     for a in self.alert_manager.alert_list[:5]:
         #         print(a)
+        # with open("delays.csv", "w") as fout:
+        #     for t in self.packet_parser.delays:
+        #         line = str(t[0])  + "," + str(t[1]) + "\n"
+        #         fout.write(line)
 
     def restart_sniffer(self):
         self.sniffer_thread.stop()
