@@ -136,14 +136,17 @@ class TrafficMonitor:
 
                     # update the list of flows
                     for flow_key in self.flows.copy():
-                        self.host_state.flows[flow_key] = self.flows[flow_key]
+                        if flow_key not in self.host_state.flows:
+                            self.host_state.flows[flow_key] = []
+                        self.host_state.flows[flow_key] += self.flows[flow_key]
+                    self.flows = {}
 
                     self.host_state.domain_scores = self.domain_scores
                     self.host_state.last_update = time.time()
                     self.host_state.last_timestamp = self.last_timestamp
                     self.new_data = False
                     last_t = datetime.datetime.fromtimestamp(self.host_state.last_timestamp).strftime('%H:%M:%S')
-                    logging.debug("[Monitor] Updated data to host thread, last-t: %s (source:%s)", last_t, self.host_state.capture_file.split("/")[-1])
+                    logging.info("[Monitor] Updated data to host thread, last-t: %s", last_t)
                 # end of lock
                 # wait until next iteration,
                 # split waiting time into small waits to check if process is still active
@@ -178,7 +181,7 @@ class TrafficMonitor:
             self.domain_scores[domain_name] = round(score,2)
         else:
             self.passive_DNS[domain_name].update(ip_list)
-            self.new_data = True
+        self.new_data = True
 
     def add_to_queried_domains(self, ip, fqdn, timestamp):
         self.queried_domains.setdefault(ip, []).append((timestamp, fqdn))
@@ -203,4 +206,6 @@ class TrafficMonitor:
         """Adds an entry to flow based on information received from the packet parser"""
         self.flows.setdefault(flow_key, []).append(pkt_att)
         self.last_timestamp = pkt_att.timestamp
+        d = datetime.datetime.fromtimestamp(self.last_timestamp)
+        logging.info("Added to flow, packet at %s", d.strftime("%H:%M:%S"))
         self.new_data = True
