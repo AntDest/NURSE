@@ -300,7 +300,5 @@ class PacketParser:
                 logging.info("%s: [PacketParser] %d packets", self.host_state.capture_file.split("/")[-1], self.count)
 
         safe_run(self.parse_packet, args=[pkt])
-        delay = time.time() - pkt.time
-        if self.count % 50 == 0:
-            print(self.count, "OUT," , datetime.timedelta(seconds=delay))
-        self.delays.append((time.time(), delay))
+        # delay = time.time() - pkt.time
+        # self.delays.append((time.time(), delay))
