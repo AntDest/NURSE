@@ -12,7 +12,7 @@ def humanbytes(B):
    if B < KB:
       return '{0} B'.format(B)
    elif KB <= B < MB:
-      return '{0:.2f} KB'.format(B/KB)
+      return '{0:.2f} kB'.format(B/KB)
    elif MB <= B < GB:
       return '{0:.2f} MB'.format(B/MB)
    elif GB <= B < TB:

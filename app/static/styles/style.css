@@ -1,3 +1,40 @@
 th, td {
     border-bottom: 1px solid #ddd;
 }
+
+
+body {
+    margin: 0;
+  }
+#page {
+    margin: 8px;
+}
+
+/* NAVBAR */
+nav {
+    margin-bottom: 50px;
+}
+
+#navbar-ul {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background-color: #555;
+}
+
+.navbar-li {
+    float:left;
+}
+.navbar-li a:hover {
+    background-color: #111;
+}
+
+.navbar-li a {
+    display: block;
+    padding: 14px 16px;
+    color: white;
+    text-decoration: none;
+}
+
+

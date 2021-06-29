@@ -7,13 +7,27 @@
     <link rel="stylesheet" href="{{ url_for('static',filename='styles/style.css') }}">
 </head>
 <body>
-    <header>
-        {% block header %}{% endblock %}
-    </header>
+    <nav>
+        <ul id="navbar-ul">
+            <li class="navbar-li"> <a href="/">Home</a> </li>
+            <li class="navbar-li"> <a href="/devices">Devices</a> </li>
+            <li class="navbar-li"> <a href="/alerts">Alerts</a> </li>
+            <li class="navbar-li"> <a href="/domains">Domains</a> </li>
+            <li class="navbar-li"> <a href="/config">Config</a> </li>
+        </ul>
+    </nav>
 
-    <div id="content">
-        {% block content %}{% endblock %}
+
+    <div id="page">
+        <header>
+            {% block header %}{% endblock %}
+        </header>
+
+        <div id="content">
+            {% block content %}{% endblock %}
+        </div>
     </div>
+
 
 </body>
 </html>

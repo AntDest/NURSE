@@ -42,9 +42,9 @@
             var box = document.getElementById("checkbox_device_" + id)
             var enable = box.checked;
             var xhttp = new XMLHttpRequest();
-            var url = "/update_device?ip=" + ip + "&enable=" + enable; 
+            var url = "/update_device?ip=" + ip + "&enable=" + enable;
             xhttp.open("GET", url, true);
-            xhttp.send(); 
+            xhttp.send();
         }
     </script>
 {% endblock %}
