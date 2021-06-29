@@ -82,7 +82,7 @@ def main(online, capture_file, output_file):
         print(e)
     finally:
         print("[Main] ---------------------- Ending ----------------------")
-        logging.info("[Main] %d packets captures", h.packet_parser.count)
+        logging.info("[Main] %d packets captured", h.packet_parser.count)
         h.stop()
         if output_file != "":
             export_to_file(h, output_file)
