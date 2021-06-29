@@ -25,4 +25,5 @@ def validate_domain_string(text):
    for c in text:
       if c not in VALID_CHARS:
          return False
+   if text == "": return False
    return True

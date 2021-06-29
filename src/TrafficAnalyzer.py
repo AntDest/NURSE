@@ -178,16 +178,23 @@ class TrafficAnalyzer():
             key = (getattr(flow,"IP_src"), getattr(flow,"IP_dst"), getattr(flow, "port_dst"))
             syn_on_port[key] = syn_on_port.get(key, 0) + syn_counts[flow]
         threshold = self.host_state.config.get_config("MAX_CONNECTIONS_PER_PORT")
+        whitelist = self.host_state.config.get_config("WHITELIST_DOMAINS")
         for key in syn_on_port:
+            print(key, syn_on_port[key], threshold)
             if syn_on_port[key] > threshold:
                 host_IP = key[0]
                 target_IP = key[1]
-                domain = self.host_state.reverse_pDNS(target_IP)
-                logging.debug(f"ALERT: DDoS {host_IP} has initiated {syn_on_port[key]} connections with {target_IP}:{key[2]} ({domain})")
-                timestamp_start = self.start_time
-                timestamp_end = self.stop_time
-                conn_count = syn_on_port[key]
-                self.host_state.alert_manager.new_alert_dos(host_IP, target_IP, timestamp_start, timestamp_end, conn_count, threshold)
+                # check if IP is part of the whitelist
+                domain = ""
+                if whitelist != []:
+                    domain = self.host_state.reverse_pDNS(target_IP)
+                    # if the whitelist is empty, domain will stay "" and "" not in [] will return True
+                if  domain == "unknown_domain" or domain not in whitelist:
+                    logging.debug(f"ALERT: DDoS {host_IP} has initiated {syn_on_port[key]} connections with {target_IP}:{key[2]} ({domain})")
+                    timestamp_start = self.start_time
+                    timestamp_end = self.stop_time
+                    conn_count = syn_on_port[key]
+                    self.host_state.alert_manager.new_alert_dos(host_IP, target_IP, timestamp_start, timestamp_end, conn_count, threshold)
 
     def detect_contacted_ip(self, contacted_ips):
         pDNS = self.host_state.passive_DNS.copy()

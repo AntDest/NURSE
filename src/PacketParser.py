@@ -96,7 +96,7 @@ class PacketParser:
                 dns_type = DNS_RECORD_TYPE[answer.type]
                 if dns_type == "A" or dns_type == "AAAA":
                     logging.debug("DNS RESPONSE %s : %s", pkt[sc.DNS].an[x].rrname, pkt[sc.DNS].an[x].rdata)
-                    response = pkt[sc.DNS].an[x].rrname.decode(), pkt[sc.DNS].an[x].rdata
+                    response = pkt[sc.DNS].an[x].rrname.decode().rstrip("."), pkt[sc.DNS].an[x].rdata
                     response_list.append(response)
         return response_list
 

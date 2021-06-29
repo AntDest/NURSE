@@ -1,6 +1,6 @@
 {% extends "layout.html" %}
 
-{% block title %}Device list{% endblock %}
+{% block title %}Configuration{% endblock %}
 {% block header %}
 <h1>Config</h1>
 
@@ -13,9 +13,16 @@
         <fieldset>
         <legend>Blacklist</legend>
             <!-- Blacklist textarea -->
-            <label for="blacklist">Blacklisting rules</label><br>
+            <label for="blacklist_domains">Blacklisting rules</label><br>
             <textarea name="blacklist_domains" rows="10" cols="30">
             {%- for domain in config["BLACKLIST_DOMAINS"] %}
+{{ domain }}
+            {%- endfor -%}
+            </textarea>
+        <br>
+        <label for="whitelist_domains">Whitelist domains (will not trigger DoS alerts)</label><br>
+            <textarea name="whitelist_domains" rows="10" cols="30">
+            {%- for domain in config["WHITELIST_DOMAINS"] %}
 {{ domain }}
             {%- endfor -%}
             </textarea>
