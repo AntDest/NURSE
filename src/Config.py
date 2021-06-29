@@ -13,7 +13,7 @@ class Config:
     "TELNET_PORT_LIST": [23],
     # the following entries can be modified by the user in the web server
     "ENABLE_BLACKLIST_QUERY": True,
-    "BLACKLIST_DOMAINS": ["neverssl.com", "grenoble.fr"],
+    "BLACKLIST_DOMAINS": [],
     "WHITELIST_PORTS":  [80,443],
     "TIME_WINDOW":  60,
     "MAX_PORTS_PER_HOST":  30,

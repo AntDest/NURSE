@@ -2,9 +2,9 @@
 
 {% block title %}Device list{% endblock %}
 {% block header %}
-<h1>Device list</h1>
+<h1>Config</h1>
 
-<p>Here are the devices we found in your network</p>
+
 
 {% endblock %}
 
@@ -13,7 +13,7 @@
         <fieldset>
         <legend>Blacklist</legend>
             <!-- Blacklist textarea -->
-            <label for="blacklist">Blacklisting rules</label>
+            <label for="blacklist">Blacklisting rules</label><br>
             <textarea name="blacklist_domains" rows="10" cols="30">
             {%- for domain in config["BLACKLIST_DOMAINS"] %}
 {{ domain }}
@@ -30,8 +30,47 @@
 
         <fieldset>
         <legend>Alerts parameters</legend>
-            <label for="time_window">Time window (in seconds):</label>
-            <input type="number" id="time_window" name="time_window" min="1" max="3600" value="{{ config['TIME_WINDOW'] }}">
+            <label for="time_window">Time window (in seconds):</label><br>
+            <input type="number" id="time_window" name="time_window" min="1" max="3600" value="{{ config['TIME_WINDOW'] }}"><br>
+
+            <label for="MAX_PORTS_PER_HOST">Maximum port per host before vertical port scan alert:</label><br>
+            <input type="number" id="MAX_PORTS_PER_HOST" name="MAX_PORTS_PER_HOST" min="1" max="65535" value="{{ config['MAX_PORTS_PER_HOST'] }}">
+            <br>
+
+            <label for="MAX_IP_PER_PORT">Maximum IP per port before horizontal port scan alert:</label><br>
+            <input type="number" id="MAX_IP_PER_PORT" name="MAX_IP_PER_PORT" min="1" value="{{ config['MAX_IP_PER_PORT'] }}">
+            <br>
+
+            <label for="BRUTEFORCE_CONNECTION_THRESHOLD">Maximum connections on SSH or Telnet before bruteforce alert</label><br>
+            <input type="number" id="BRUTEFORCE_CONNECTION_THRESHOLD" name="BRUTEFORCE_CONNECTION_THRESHOLD" min="1" value="{{ config['BRUTEFORCE_CONNECTION_THRESHOLD'] }}">
+            <br>
+
+            <label for="MAX_CONNECTIONS_PER_PORT">Maximum connections per port before DoS alert</label><br>
+            <input type="number" id="MAX_CONNECTIONS_PER_PORT" name="MAX_CONNECTIONS_PER_PORT" min="1" value="{{ config['MAX_CONNECTIONS_PER_PORT'] }}">
+            <br>
+
+            <label for="MAX_NXDOMAIN">Maximum non existent domains</label><br>
+            <input type="number" id="MAX_NXDOMAIN" name="MAX_NXDOMAIN" min="1" value="{{ config['MAX_NXDOMAIN'] }}">
+            <br>
+
+
+            <label for="DOMAIN_SCORE_THRESHOLD">Minimum score to flag domains as malicious</label><br>
+            <input type="number" id="DOMAIN_SCORE_THRESHOLD" name="DOMAIN_SCORE_THRESHOLD" min="1" max="10" step="0.1" value="{{ config['DOMAIN_SCORE_THRESHOLD'] }}">
+            <br>
+
+
+            <label for="MAX_DOMAIN_COUNT">Maximum domains flagged as malicious</label><br>
+            <input type="number" id="MAX_DOMAIN_COUNT" name="MAX_DOMAIN_COUNT" min="1" value="{{ config['MAX_DOMAIN_COUNT'] }}">
+            <br>
+
+            <label for="whitelist-ports">Ports whitelisted for horizontal scanning</label><br>
+            <textarea name="whitelist-ports" rows="10" cols="30">
+            {%- for port in config["WHITELIST_PORTS"] %}
+{{ port }}
+            {%- endfor -%}
+            </textarea>
+            <br>
+
         </fieldset>
     <input type="submit" value="Save config">
     </form>

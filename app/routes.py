@@ -151,7 +151,7 @@ def domains_bytes():
         ip_src = getattr(flow, "IP_src")
         ip_dst = getattr(flow, "IP_dst")
         domain = hs.reverse_pDNS(ip_dst)
-        if domain == "unknown domain":
+        if domain == "unknown_domain":
             domain = ip_dst
         flow_pkt_list = flows[flow]
         sent_bytes, received_bytes = count_total_bytes_in_flow(flow_pkt_list)
@@ -197,10 +197,23 @@ def config_route():
 
 @app.route("/update_config", methods=["POST"])
 def update_config():
+    print(request.form)
     input_blacklist = request.form["blacklist_domains"].split("\n")
     blacklist_domains = [domain.strip() for domain in input_blacklist if validate_domain_string(domain.strip())]
+
     input_enable_ip_blacklist = (request.form.get("enable_ip_blacklist", 'off') == "on")
     input_time_window = int(request.form["time_window"])
+
+    input_ports_whitelist = request.form["whitelist-ports"].split("\n")
+    input_ports_whitelist = [port.strip() for port in input_ports_whitelist]
+
+    input_max_ports_per_host = int(request.form["MAX_PORTS_PER_HOST"])
+    input_max_ip_per_port = int(request.form["MAX_IP_PER_PORT"])
+
+    input_max_connections = int(request.form["MAX_CONNECTIONS_PER_PORT"])
+    input_max_nxdomains = int(request.form["MAX_NXDOMAIN"])
+    input_max_domain_count = int(request.form["MAX_DOMAIN_COUNT"])
+    input_domain_score = int(request.form["DOMAIN_SCORE_THRESHOLD"])
 
     # update the config
     hs = get_host_state()
@@ -208,4 +221,11 @@ def update_config():
         hs.config.set_config("BLACKLIST_DOMAINS", blacklist_domains)
         hs.config.set_config("TIME_WINDOW", input_time_window)
         hs.config.set_config("ENABLE_BLACKLIST_QUERY", input_enable_ip_blacklist)
+        hs.config.set_config("WHITELIST_PORTS", input_ports_whitelist)
+        hs.config.set_config("MAX_PORTS_PER_HOST", input_max_ports_per_host)
+        hs.config.set_config("MAX_IP_PER_PORT", input_max_ip_per_port)
+        hs.config.set_config("MAX_CONNECTIONS_PER_PORT", input_max_connections)
+        hs.config.set_config("MAX_DOMAIN_COUNT", input_max_domain_count)
+        hs.config.set_config("MAX_NXDOMAIN", input_max_nxdomains)
+        hs.config.set_config("DOMAIN_SCORE_THRESHOLD", input_domain_score)
     return redirect("/config", code=302)
