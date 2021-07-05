@@ -98,7 +98,7 @@ def get_traffic_map():
     for flow in flows:
         ip_src = getattr(flow,"IP_src")
         ip_dst = getattr(flow,"IP_dst")
-        if IP_is_private(ip):
+        if IP_is_private(ip_dst):
             continue
         if ip_src in victim_ip_list:
             if ip_src not in victims_to_dest_data_size:
@@ -121,7 +121,6 @@ def get_traffic_map():
             country_code = CONVERT_ISO_3166_2_to_1.get(country, country)
             line = f"{ip},{country_code},{victim_to_countries[ip][country]}\n"
             csv_string += line
-    print(csv_string)
     return csv_string
 
 @app.route("/map")

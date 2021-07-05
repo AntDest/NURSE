@@ -113,7 +113,6 @@ class PacketParser:
                 response_list = self.parse_DNS_response(pkt)
                 for r in response_list:
                     fqdn, ip_response = r
-                    print(fqdn, ip_response)
                     # logging.debug("[Packet Parser] Domain %s, ip list %s", fqdn, ip_list)
                     # add to pDNS data
                     self.traffic_monitor.add_to_pDNS(fqdn, [ip_response])

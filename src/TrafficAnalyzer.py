@@ -180,7 +180,6 @@ class TrafficAnalyzer():
         threshold = self.host_state.config.get_config("MAX_CONNECTIONS_PER_PORT")
         whitelist = self.host_state.config.get_config("WHITELIST_DOMAINS")
         for key in syn_on_port:
-            print(key, syn_on_port[key], threshold)
             if syn_on_port[key] > threshold:
                 host_IP = key[0]
                 target_IP = key[1]
