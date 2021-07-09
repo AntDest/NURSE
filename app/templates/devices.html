@@ -22,7 +22,7 @@
             <td>{{ d.IP }}</td>
             <td>{{ d.name }}</td>
             <td>{{ d.manufacturer }}</td>
-            <td><input type="checkbox" class="device_checkbox" name="scan:{{d.id}}" id="checkbox_device_{{d.id}}" {% if d.victim %}  checked  {% endif %} onchange="updateDevice('{{d.IP}}', {{d.id}})" ></td>
+            <td><input type="checkbox" class="device_checkbox" name="scan:{{d.id}}" id="checkbox_device_{{d.id}}" {% if d.victim %}  checked  {% endif %} onchange="updateDevice('{{d.IP}}', {{d.id}}, '{{d.name}}')" ></td>
         </tr>
         {% endfor %}
     </table>
@@ -38,23 +38,31 @@
 
 
 
-        function updateDevice(ip, id) {
+        function updateDevice(ip, id, name) {
             var box = document.getElementById("checkbox_device_" + id)
             var enable = box.checked;
             var url = "/update_device?ip=" + ip + "&enable=" + enable 
             // UNCOMMENT the following to enable MAC security for monitoring
-            /* let mac = prompt("Please enter the MAC address of this device", "aa:bb:cc:dd:ee:ff");
-            if (mac == null || mac == "") {
-                console.log("Invalid MAC");
-                return -1;
-            }
-            else {
-                var url = "/update_device?ip=" + ip + "&enable=" + enable + "&mac="+mac;
+            /*
+            if (enable) {
+                let mac = prompt("Please enter the MAC address of " + name, "aa:bb:cc:dd:ee:ff");
+                if (mac == null || mac == "") {
+                    console.log("Invalid MAC");
+                    return -1;
+                }
+                else {
+                    var url = "/update_device?ip=" + ip + "&enable=" + enable + "&mac=" + mac;
+                }
             }
             */
             var xhttp = new XMLHttpRequest();
-            xhttp.open("GET", url, true);
+            xhttp.open("GET", url, false);
             xhttp.send();
+            console.log(xhttp.responseText);
+            if (xhttp.responseText == "False") {
+                alert("Error, " + name + " could not be added to monitored devices");
+                box.checked = false;
+            }
         }
     </script>
 {% endblock %}
