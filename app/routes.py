@@ -55,6 +55,11 @@ def update_device():
     hs = get_host_state()
     if enable and ip not in hs.victim_ip_list:
         if is_IPv4(ip):
+            # uncomment the following lines to process the MAC check when enabling tracking
+            # user_mac = request.args.get("mac")
+            # real_mac = hs.arp_table[ip]
+            # if user_mac != real_mac:
+            #     return "False"
             hs.add_to_victim_list(ip)
             return "True"
     elif not enable and ip in hs.victim_ip_list:

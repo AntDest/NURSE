@@ -41,8 +41,18 @@
         function updateDevice(ip, id) {
             var box = document.getElementById("checkbox_device_" + id)
             var enable = box.checked;
+            var url = "/update_device?ip=" + ip + "&enable=" + enable 
+            // UNCOMMENT the following to enable MAC security for monitoring
+            /* let mac = prompt("Please enter the MAC address of this device", "aa:bb:cc:dd:ee:ff");
+            if (mac == null || mac == "") {
+                console.log("Invalid MAC");
+                return -1;
+            }
+            else {
+                var url = "/update_device?ip=" + ip + "&enable=" + enable + "&mac="+mac;
+            }
+            */
             var xhttp = new XMLHttpRequest();
-            var url = "/update_device?ip=" + ip + "&enable=" + enable;
             xhttp.open("GET", url, true);
             xhttp.send();
         }
