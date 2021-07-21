@@ -38,7 +38,5 @@ if __name__ == "__main__":
     else:
         print("[v] Npcap installation successful")
         os.remove("npcap_installer.exe")
-
-    print("[*] Running the main script")
-    os.system("main.exe")
+        print("==> You can now close this window and run NURSE by double clicking on main.exe")
     os.system("PAUSE")
