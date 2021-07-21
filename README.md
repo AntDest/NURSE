@@ -34,3 +34,5 @@ To run the project for the first time:
 - *The tool is now launched*
 
 To run the project later, simply double click on `main.exe`
+
+To close the tool, hit CTRL+C.
