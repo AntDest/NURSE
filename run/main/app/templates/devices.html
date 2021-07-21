@@ -1,0 +1,68 @@
+{% extends "layout.html" %}
+
+{% block title %}Device list{% endblock %}
+{% block header %}
+<h1>Device list</h1>
+
+<p>Here are the devices we found in your network</p>
+
+<p>Last update {{data.last_update | timestamp_to_date}}</p>
+{% endblock %}
+
+{% block content %}
+    <table id="device_table" style="width:100%">
+        <tr>
+          <th>IP</th>
+          <th>Device name {% if data.offline %}  (only in online mode)  {% endif %}</th>
+          <th>Manufacturer</th>
+          <th>Scanning</th>
+        </tr>
+        {% for d in data.device_list %}
+        <tr>
+            <td>{{ d.IP }}</td>
+            <td>{{ d.name }}</td>
+            <td>{{ d.manufacturer }}</td>
+            <td><input type="checkbox" class="device_checkbox" name="scan:{{d.id}}" id="checkbox_device_{{d.id}}" {% if d.victim %}  checked  {% endif %} onchange="updateDevice('{{d.IP}}', {{d.id}}, '{{d.name}}')" ></td>
+        </tr>
+        {% endfor %}
+    </table>
+    </ul>
+
+    <script>
+    // reset all checkboxes to default state, prevent browser from caching
+    var allCheckboxes = document.querySelectorAll('input[type=checkbox]');
+    // loop on all checkboxes found (trick to iterate on nodeList)
+    [].forEach.call(allCheckboxes, function (checkbox) {
+        checkbox.checked = checkbox.defaultChecked;
+    });
+
+
+
+        function updateDevice(ip, id, name) {
+            var box = document.getElementById("checkbox_device_" + id)
+            var enable = box.checked;
+            var url = "/update_device?ip=" + ip + "&enable=" + enable 
+            // UNCOMMENT the following to enable MAC security for monitoring
+            /*
+            if (enable) {
+                let mac = prompt("Please enter the MAC address of " + name, "aa:bb:cc:dd:ee:ff");
+                if (mac == null || mac == "") {
+                    console.log("Invalid MAC");
+                    return -1;
+                }
+                else {
+                    var url = "/update_device?ip=" + ip + "&enable=" + enable + "&mac=" + mac;
+                }
+            }
+            */
+            var xhttp = new XMLHttpRequest();
+            xhttp.open("GET", url, false);
+            xhttp.send();
+            console.log(xhttp.responseText);
+            if (xhttp.responseText == "False") {
+                alert("Error, " + name + " could not be added to monitored devices");
+                box.checked = false;
+            }
+        }
+    </script>
+{% endblock %}

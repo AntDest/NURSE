@@ -1,0 +1,88 @@
+{% extends "layout.html" %}
+
+{% block title %}Domains scores{% endblock %}
+{% block header %}
+<h1>Domain scores</h1>
+
+<p>This is where you can see some information about the captured traffic</p>
+
+<p>Last update {{data.last_update | timestamp_to_date}}</p>
+{% endblock %}
+
+{% block content %}
+
+    <p><a href="/map">Device map</a></p>
+
+    <p>
+        Use the following list to filter content by device:
+    </p>
+
+    <ul id="device_filter_list">
+
+    </ul>
+
+    <table id="domain_list" style="width:100%">
+        <thead>
+            <th>Device name</th>
+            <th>Domain</th>
+            <th>Sent</th>
+            <th>Received</th>
+            <th>Score</th>
+        </thead>
+        <tbody>
+            {% for line in data.table_domains %}
+            <tr>
+                <td>{{ line["device_name"] }}</td>
+                <td>{{ line["domain"] }}</td>
+                <td>{{ line["sent_bytes"] }}</td>
+                <td>{{ line["received_bytes"] }}</td>
+                <td>{{ line["score"] }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </ul>
+
+    <script>
+        function createFilterList(list_devices) {
+                var ul_devices = document.getElementById("device_filter_list");
+                for (i = 0; i < list_devices.length; i++) {
+                    var li = document.createElement("li");
+                    li.innerHTML = "<label><input type=\"checkbox\" checked onchange=\"filterTable()\"></input>" + list_devices[i] + "</label>";
+                    ul_devices.appendChild(li);
+                }
+            }
+
+            // called when (un)checking a box in the filter list on top
+            function filterTable() {
+                let allowed_devices = [];
+                var ul_devices = document.getElementById("device_filter_list");
+                let list_li = ul_devices.getElementsByTagName("li");
+                for (let i = 0; i < list_li.length; i++) {
+                    const li = list_li[i];
+                    let box = li.getElementsByTagName("input")[0];
+                    if (box.checked) {
+                        allowed_devices.push(li.innerText);
+                    }
+                }
+                // allowed_devices now contains the list of devices we want to keep
+                let table = document.getElementById("domain_list");
+                tr = table.getElementsByTagName("tr");
+                // Loop through all table rows, and hide those who don't match the allowed_devices
+                for (i = 0; i < tr.length; i++) {
+                    td = tr[i].getElementsByTagName("td")[0];
+                    if (td) {
+                        txtValue = td.textContent || td.innerText;
+                        if (allowed_devices.includes(txtValue)) {
+                            tr[i].style.display = "";
+                        } else {
+                            tr[i].style.display = "none";
+                        }
+                    }
+                }
+            }
+
+        var list_devices = {{data.list_devices | tojson}};
+        createFilterList(list_devices);
+    </script>
+{% endblock %}
